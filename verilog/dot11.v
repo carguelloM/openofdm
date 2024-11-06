@@ -175,13 +175,25 @@ end
 wire [`ROTATE_LUT_LEN_SHIFT-1:0] sync_long_rot_addr;
 wire [31:0] sync_long_rot_data;
 
+wire [`ROTATE_LUT_LEN_SHIFT-1:0] rotafft_rot_addr;
+wire [31:0] rotafft_rot_data;
+
+wire [`ROTATE_LUT_LEN_SHIFT-1:0] porta_rot_addr;
+wire [31:0] porta_rot_data;
+
 wire [`ROTATE_LUT_LEN_SHIFT-1:0] eq_rot_addr;
 wire [31:0] eq_rot_data;
 
+wire [31:0] rotafft_out;
+wire rotafft_stb;
+
+assign porta_rot_addr = sync_long_out_strobe || rotafft_stb ? rotafft_rot_addr : sync_long_rot_addr;
+assign sync_long_rot_data = porta_rot_data;
+assign rotafft_rot_data = porta_rot_data; 
 rot_lut rot_lut_inst (
     .clka(clock),
-    .addra(sync_long_rot_addr),
-    .douta(sync_long_rot_data),
+    .addra(porta_rot_addr),
+    .douta(porta_rot_data),
 
     .clkb(clock),
     .addrb(eq_rot_addr),
@@ -245,6 +257,7 @@ reg equalizer_reset;
 reg equalizer_enable;
 
 reg ht_next;
+reg ht_detected;
 
 wire eq_out_stb_delayed;
 wire [15:0] eq_out_i = equalizer_out[31:16];
@@ -397,13 +410,33 @@ sync_long sync_long_inst (
     .num_ofdm_symbol(num_ofdm_symbol)
 );
 
+rot_after_fft #( .DATA_WIDTH(16)) rotafft_inst(
+    .clock(clock),
+    .reset(reset | sync_long_reset),
+    .enable(enable),
+    .input_strobe(sync_long_out_strobe),
+    .fft_win_shift(fft_win_shift),
+    .phase_offset(phase_offset),
+    .Fc_in_MHz(Fc_in_MHz),
+    .gi(short_gi),
+    .ht_detected(ht_detected),
+    .ofdm_sym_count_in(num_ofdm_symbol),
+    .rot_addr(rotafft_rot_addr),
+    .rot_data(rotafft_rot_data),
+    .in_fft_i(sync_long_out[31:16]),
+    .in_fft_q(sync_long_out[15:0]),
+    .out_fft_i(rotafft_out[31:16]),
+    .out_fft_q(rotafft_out[15:0]),
+    .output_strobe(rotafft_stb)
+);
+
 equalizer equalizer_inst (
     .clock(clock),
     .reset(reset | equalizer_reset),
     .enable(enable & equalizer_enable),
 
-    .sample_in(sync_long_out),
-    .sample_in_strobe(sync_long_out_strobe && !(state==S_HT_SIGNAL && num_ofdm_symbol==6)),
+    .sample_in(rotafft_out),
+    .sample_in_strobe(rotafft_stb && !((state==S_HT_SIGNAL || state==S_CHECK_HT_SIG_CRC) && num_ofdm_symbol==6)),
     .ht_next(ht_next),
     .pkt_ht(pkt_ht),
     .ht_smoothing(ht_smoothing|force_ht_smoothing),
@@ -536,6 +569,7 @@ always @(posedge clock) begin
         equalizer_reset <= 0;
         equalizer_enable <= 0;
         ht_next <= 0;
+        ht_detected <= 0;
 
         pkt_len_rem <= 0;
         mpdu_del_crc <= 0;
@@ -577,6 +611,7 @@ always @(posedge clock) begin
 
                 pkt_begin <= 0;
                 pkt_ht <= 0;
+                ht_detected <= 0;
                 crc_reset <= 0;
                 short_gi <= 0;
                 demod_is_ongoing <= 0;
@@ -760,6 +795,7 @@ always @(posedge clock) begin
                     num_bits_to_decode <= 48;
                     do_descramble <= 0;
                     state <= S_HT_SIGNAL;
+                    ht_detected <= 1;
                 end else if (normal_eq_count > 4) begin
                     //num_bits_to_decode <= (legacy_len+3)<<4;
                     do_descramble <= 1;
