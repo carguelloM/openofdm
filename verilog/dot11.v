@@ -462,7 +462,7 @@ equalizer equalizer_inst (
 );
 
 
-delayT #(.DATA_WIDTH(33), .DELAY(9)) eq_delay_inst (
+delayT #(.DATA_WIDTH(33), .DELAY(17)) eq_delay_inst (
     .clock(clock),
     .reset(reset),
 
@@ -790,19 +790,21 @@ always @(posedge clock) begin
                     end
                 end
 
-                if (rot_eq_count >= 4) begin
+                if (rot_eq_count >= 8) begin
                     // HT-SIG detected
                     num_bits_to_decode <= 48;
                     do_descramble <= 0;
                     state <= S_HT_SIGNAL;
                     ht_detected <= 1;
-                end else if (normal_eq_count > 4) begin
+                end else if (normal_eq_count > 8) begin
                     //num_bits_to_decode <= (legacy_len+3)<<4;
                     do_descramble <= 1;
                     pkt_header_valid <= 1;
                     pkt_header_valid_strobe <= 1;
                     pkt_begin <= 1;
                     state <= S_DECODE_DATA;
+                    ofdm_in_i <= eq_out_i_delayed;
+                    ofdm_in_q <= eq_out_q_delayed;
                 end
             end
 
