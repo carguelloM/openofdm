@@ -22,6 +22,7 @@ module dot11 (
     input signed [10:0] power_thres,
     input [31:0] min_plateau,
     input threshold_scale,
+    input [15:0] Fc_in_MHz,
 
     // INPUT: RSSI
     input signed [10:0] rssi_half_db,

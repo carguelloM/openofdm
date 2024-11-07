@@ -24,6 +24,7 @@
 		input  wire signed [(RSSI_HALF_DB_WIDTH-1):0] rssi_half_db,
 		input  wire [(2*IQ_DATA_WIDTH-1):0] sample_in,
     input  wire sample_in_strobe,
+        input wire [15:0] Fc_in_MHz,
 
 		output wire demod_is_ongoing, // this needs to be corrected further to indicate actual RF on going regardless the latency
 //		output wire pkt_ht,
@@ -172,6 +173,7 @@
 		.power_thres(rx_sensitivity_th),
 		.min_plateau(slv_reg3),
 		.threshold_scale(~slv_reg1[8]),
+		.Fc_in_MHz(Fc_in_MHz),
 
 		.rssi_half_db(rssi_half_db),
 
