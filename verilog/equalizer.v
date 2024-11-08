@@ -67,14 +67,16 @@ localparam IN_BUF_LEN_SHIFT = 6;
 
 localparam S_FIRST_LTS = 0;
 localparam S_SECOND_LTS = 1;
-localparam S_SMOOTH_CH_DC = 2;
-localparam S_SMOOTH_CH_LTS = 3;
-localparam S_GET_POLARITY = 4;
-localparam S_CPE_ESTIMATE = 5;
-localparam S_PILOT_PE_CORRECTION = 6; 
-localparam S_LVPE_ESTIMATE = 7;
-localparam S_ALL_SC_PE_CORRECTION = 8;
-localparam S_HT_LTS = 9;
+localparam S_SMOOTH_ACTSC = 2;
+localparam S_GET_POLARITY = 3;
+localparam S_CPE_ESTIMATE = 4;
+localparam S_ALL_SC_PE_CORRECTION = 5;
+localparam S_HT_LTS = 6;
+
+localparam S_SMOOTH_EDGE = 0;
+localparam S_SMOOTH_FIRST_HALF = 1;
+localparam S_SMOOTH_SND_HALF = 2 ;
+localparam S_SMOOTH_LAST_SC = 3;
 
 reg enable_delay;
 wire reset_internal = (enable==0 && enable_delay==1);//reset internal after the module is disabled in case the disable lock the state/stb to a non-end state.
@@ -82,6 +84,9 @@ wire reset_internal = (enable==0 && enable_delay==1);//reset internal after the 
 reg ht;
 reg [5:0] num_data_carrier;
 reg [7:0] num_ofdm_sym;
+wire [5:0] edge_sc_end, edge_sc_init;
+assign edge_sc_end = ht? 28:26;
+assign edge_sc_init = ht? 38:40;
 
 // bit masks
 reg [63:0] lts_ref;
@@ -144,7 +149,6 @@ reg pilot_in_stb;
 wire signed [31:0] pilot_i;
 wire signed [31:0] pilot_q;
 reg signed [31:0] pilot_i_reg, pilot_q_reg;
-reg signed [15:0] pilot_iq_phase[0:3];
 
 reg signed [31:0] pilot_sum_i;
 reg signed [31:0] pilot_sum_q;
@@ -152,29 +156,10 @@ reg signed [31:0] pilot_sum_q;
 assign phase_in_i = pilot_i_reg;
 assign phase_in_q = pilot_q_reg;
 
-//reg signed [15:0] pilot_phase_err;
-reg signed [16:0] pilot_phase_err; // 15 --> 16 = 15 + 1, extended from cpe
 reg signed [15:0] cpe; // common phase error due to RFO
-//reg signed [15:0] Sxy;
-reg signed [23:0] Sxy; // 15-->23. to avoid overflow: pilot_phase_err 16 + 5 + 2. 5 for 21* (rounding to 32); 2 for 4 pilots
-localparam Sx2 = 980;
-
-// linear varying phase error (LVPE) parameters
-reg signed [7:0] sym_idx, sym_idx2; 
-reg lvpe_in_stb;
-wire lvpe_out_stb;
-wire signed [31:0] lvpe_dividend, lvpe, peg_sym_scale;
-wire signed [23:0] lvpe_divisor;
-assign lvpe_dividend = (sym_idx <= 33 ? sym_idx*Sxy : (sym_idx-64)*Sxy);
-assign lvpe_divisor = Sx2;
-reg signed [31:0] prev_peg, prev_peg_reg, peg_pilot_scale; 
-assign peg_sym_scale = (sym_idx2 <= 33 ? sym_idx2*prev_peg : (sym_idx2-64)*prev_peg);
-
-//reg signed [15:0] phase_err;
-reg signed  [17:0] phase_err; // 15-->16: phase_err <= cpe + lvpe[17:0]; 16 + 1 = 17 for sym_phase
-//wire signed [15:0] sym_phase;
-wire signed [17:0] sym_phase;// phase_err 16 + 1
-assign sym_phase = (phase_err > 1608) ? (phase_err - 3217) : ((phase_err < -1608) ? (phase_err + 3217) : phase_err);//only taking [15:0] to rotate could have overflow!
+reg signed [7:0] sym_idx;
+wire signed [15:0] sym_phase;
+assign sym_phase = (cpe > 1608) ? (cpe - 3217) : ((cpe < -1608) ? (cpe + 3217) : cpe);//only taking [15:0] to rotate could have overflow!
 
 reg rot_in_stb;
 wire signed [15:0] rot_i;
@@ -187,22 +172,14 @@ wire [31:0] prod_i_scaled = prod_i<<(`CONS_SCALE_SHIFT+1);
 wire [31:0] prod_q_scaled = prod_q<<(`CONS_SCALE_SHIFT+1); // +1 to fix the bug threshold for demodulate.v
 wire prod_stb;
 
-reg signed [15:0] lts_reg1_i, lts_reg2_i, lts_reg3_i, lts_reg4_i, lts_reg5_i;
-reg signed [15:0] lts_reg1_q, lts_reg2_q, lts_reg3_q, lts_reg4_q, lts_reg5_q;
+reg signed [15:0] lts_reg1_i, lts_reg2_i, lts_reg3_i;
+reg signed [15:0] lts_reg1_q, lts_reg2_q, lts_reg3_q;
 wire signed [18:0] lts_sum_1_3_i = lts_reg1_i + lts_reg2_i + lts_reg3_i;
 wire signed [18:0] lts_sum_1_3_q = lts_reg1_q + lts_reg2_q + lts_reg3_q;
-wire signed [18:0] lts_sum_1_4_i = lts_reg1_i + lts_reg2_i + lts_reg3_i + lts_reg4_i;
-wire signed [18:0] lts_sum_1_4_q = lts_reg1_q + lts_reg2_q + lts_reg3_q + lts_reg4_q;
-wire signed [18:0] lts_sum_1_5_i = lts_reg1_i + lts_reg2_i + lts_reg3_i + lts_reg4_i + lts_reg5_i;
-wire signed [18:0] lts_sum_1_5_q = lts_reg1_q + lts_reg2_q + lts_reg3_q + lts_reg4_q + lts_reg5_q;
-wire signed [18:0] lts_sum_2_5_i =              lts_reg2_i + lts_reg3_i + lts_reg4_i + lts_reg5_i;
-wire signed [18:0] lts_sum_2_5_q =              lts_reg2_q + lts_reg3_q + lts_reg4_q + lts_reg5_q;
-wire signed [18:0] lts_sum_3_5_i =                           lts_reg3_i + lts_reg4_i + lts_reg5_i;
-wire signed [18:0] lts_sum_3_5_q =                           lts_reg3_q + lts_reg4_q + lts_reg5_q;
-wire signed [18:0] lts_sum_wo3_i = lts_reg1_i + lts_reg2_i              + lts_reg4_i + lts_reg5_i;
-wire signed [18:0] lts_sum_wo3_q = lts_reg1_q + lts_reg2_q              + lts_reg4_q + lts_reg5_q;
 reg signed [18:0] lts_sum_i;
 reg signed [18:0] lts_sum_q;
+reg [1:0] smooth_state, smooth_state_dl;
+reg [1:0] delay_cnt; 
 
 reg [2:0] lts_mv_avg_len;
 reg lts_div_in_stb;
@@ -210,11 +187,11 @@ reg lts_div_in_stb;
 reg prod_in_strobe;
 wire prod_out_strobe;
 
-wire [31:0] dividend_i = (state == S_SMOOTH_CH_DC || state == S_SMOOTH_CH_LTS) ? (lts_sum_i[18] == 0 ? {13'h0,lts_sum_i} : {13'h1FFF,lts_sum_i}) : (state == S_ALL_SC_PE_CORRECTION ? prod_i_scaled : 0);
-wire [31:0] dividend_q = (state == S_SMOOTH_CH_DC || state == S_SMOOTH_CH_LTS) ? (lts_sum_q[18] == 0 ? {13'h0,lts_sum_q} : {13'h1FFF,lts_sum_q}) : (state == S_ALL_SC_PE_CORRECTION ? prod_q_scaled : 0);
-wire [23:0] divisor_i = (state == S_SMOOTH_CH_DC || state == S_SMOOTH_CH_LTS) ? {21'b0,lts_mv_avg_len} : (state == S_ALL_SC_PE_CORRECTION ? mag_sq[23:0] : 1);
-wire [23:0] divisor_q = (state == S_SMOOTH_CH_DC || state == S_SMOOTH_CH_LTS) ? {21'b0,lts_mv_avg_len} : (state == S_ALL_SC_PE_CORRECTION ? mag_sq[23:0] : 1);
-wire div_in_stb = (state == S_SMOOTH_CH_DC || state == S_SMOOTH_CH_LTS) ? lts_div_in_stb : (state == S_ALL_SC_PE_CORRECTION ? prod_out_strobe : 0);
+wire [31:0] dividend_i = (state == S_SMOOTH_ACTSC) ? (lts_sum_i[18] == 0 ? {13'h0,lts_sum_i} : {13'h1FFF,lts_sum_i}) : (state == S_ALL_SC_PE_CORRECTION ? prod_i_scaled : 0);
+wire [31:0] dividend_q = (state == S_SMOOTH_ACTSC) ? (lts_sum_q[18] == 0 ? {13'h0,lts_sum_q} : {13'h1FFF,lts_sum_q}) : (state == S_ALL_SC_PE_CORRECTION ? prod_q_scaled : 0);
+wire [23:0] divisor_i = (state == S_SMOOTH_ACTSC) ? {21'b0,lts_mv_avg_len} : (state == S_ALL_SC_PE_CORRECTION ? mag_sq[23:0] : 1);
+wire [23:0] divisor_q = (state == S_SMOOTH_ACTSC) ? {21'b0,lts_mv_avg_len} : (state == S_ALL_SC_PE_CORRECTION ? mag_sq[23:0] : 1);
+wire div_in_stb = (state == S_SMOOTH_ACTSC) ? lts_div_in_stb : (state == S_ALL_SC_PE_CORRECTION ? prod_out_strobe : 0);
 
 reg [15:0] num_output;
 wire [31:0] quotient_i;
@@ -319,8 +296,7 @@ rotate rotate_inst (
 
     .in_i(buf_i_out),
     .in_q(buf_q_out),
-    // .phase(sym_phase),
-    .phase(sym_phase[15:0]),//only taking [15:0] to rotate could have overflow!
+    .phase(sym_phase),
     .input_strobe(rot_in_stb),
 
     .rot_addr(rot_addr),
@@ -382,20 +358,6 @@ divider norm_q_inst (
     .quotient(quotient_q)
 );
 
-// LVPE calculation to estimate SFO
-divider lvpe_inst (
-    .clock(clock),
-    .enable(enable),
-    .reset(reset|reset_internal),
-
-    .dividend(lvpe_dividend),
-    .divisor(lvpe_divisor),
-    .input_strobe(lvpe_in_stb),
-
-    .quotient(lvpe),
-    .output_strobe(lvpe_out_stb)
-);
-
 always @(posedge clock) begin
     if (reset|reset_internal) begin
         sample_out_strobe <= 0;
@@ -428,30 +390,24 @@ always @(posedge clock) begin
         in_waddr <= 0;
         in_raddr <= 0;
         sym_idx <= 0;
-        sym_idx2 <= 0; 
 
-        lts_reg1_i <= 0; lts_reg2_i <= 0; lts_reg3_i <= 0; lts_reg4_i <= 0; lts_reg5_i <= 0;
-        lts_reg1_q <= 0; lts_reg2_q <= 0; lts_reg3_q <= 0; lts_reg4_q <= 0; lts_reg5_q <= 0;
+        lts_reg1_i <= 0; lts_reg2_i <= 0; lts_reg3_i <= 0; 
+        lts_reg1_q <= 0; lts_reg2_q <= 0; lts_reg3_q <= 0; 
         lts_sum_i <= 0;
         lts_sum_q <= 0;
         lts_mv_avg_len <= 0;
         lts_div_in_stb <= 0;
+        smooth_state <= 0;
+        smooth_state_dl <= 0 ;
+        delay_cnt <= 0;
 
         phase_in_stb <= 0;
         pilot_sum_i <= 0;
         pilot_sum_q <= 0;
-        pilot_phase_err <= 0;
         cpe <= 0;
-        Sxy <= 0;
-        lvpe_in_stb <= 0;
-        phase_err <= 0;
         pilot_in_stb <= 0;
         pilot_i_reg <= 0;
         pilot_q_reg <= 0;
-        pilot_iq_phase[0] <= 0; pilot_iq_phase[1] <= 0; pilot_iq_phase[2] <= 0; pilot_iq_phase[3] <= 0;
-        prev_peg <= 0; 
-        prev_peg_reg <= 0; 
-        peg_pilot_scale <= 0; 
 
         prod_in_strobe <= 0;
 
@@ -467,6 +423,7 @@ always @(posedge clock) begin
         state <= S_FIRST_LTS;
     end else if (enable) begin
         sample_in_strobe_dly <= sample_in_strobe;
+        smooth_state_dl <= smooth_state;
         case(state)
             S_FIRST_LTS: begin
                 // store first LTS as is
@@ -501,99 +458,67 @@ always @(posedge clock) begin
 
                 if (lts_in_stb) begin
                     if (lts_waddr == 63) begin
-                        lts_waddr <= 0;
-                        lts_raddr <= 62;
+                        lts_waddr <= 37;
+                        lts_raddr <= 38;
                         lts_in_stb <= 0;
                         lts_div_in_stb <= 0;
-                        state <= (disable_all_smoothing?S_GET_POLARITY:S_SMOOTH_CH_DC);
+                        state <= (disable_all_smoothing?S_GET_POLARITY:S_SMOOTH_ACTSC);
+                        smooth_state <= 0;
+                        delay_cnt <= 0;
+                        lts_mv_avg_len <= 3;
                     end else begin
                         lts_waddr <= lts_waddr + 1;
                     end
                 end
             end 
 
-            // 802.11-2012.pdf: 20.3.9.4.3 Table 20-11
-            // channel estimate smoothing (averaging length = 5)
-            S_SMOOTH_CH_DC: begin
-                if(lts_div_in_stb == 1) begin
-                    lts_div_in_stb <= 0;
-                end else if(lts_raddr == 4) begin
-                    lts_sum_i <= lts_sum_wo3_i;
-                    lts_sum_q <= lts_sum_wo3_q;
-                    lts_mv_avg_len <= 4;
-                    lts_div_in_stb <= 1;
-                    lts_raddr <= 5;
-                end else if(lts_raddr != 5) begin
-                    // LTS Shift register
-                    lts_reg1_i <= lts_i_out; lts_reg2_i <= lts_reg1_i; lts_reg3_i <= lts_reg2_i; lts_reg4_i <= lts_reg3_i; lts_reg5_i <= lts_reg4_i;
-                    lts_reg1_q <= lts_q_out; lts_reg2_q <= lts_reg1_q; lts_reg3_q <= lts_reg2_q; lts_reg4_q <= lts_reg3_q; lts_reg5_q <= lts_reg4_q;
-                    lts_raddr[5:0] <= lts_raddr[5:0] + 1;
-                end else begin
-                    if(lts_in_stb == 1) begin
-                        lts_waddr <= 37;
-                        lts_raddr <= 38;
-                        lts_in_stb <= 0;
-                        state <= S_SMOOTH_CH_LTS;
-                    end else if(lts_div_out_stb == 1) begin
-                        lts_i_in <= lts_div_i[15:0];
-                        lts_q_in <= lts_div_q[15:0];
-                        lts_in_stb <= 1;
+
+            S_SMOOTH_ACTSC: begin
+                if (smooth_state == S_SMOOTH_EDGE) begin
+                    if (smooth_state_dl == S_SMOOTH_EDGE) // stay extra clock on the edge 
+                        smooth_state <= S_SMOOTH_FIRST_HALF;
+                    else if (smooth_state_dl == S_SMOOTH_SND_HALF)
+                        smooth_state <= S_SMOOTH_SND_HALF;                     
+                end else if (smooth_state == S_SMOOTH_FIRST_HALF) begin // smooth first half
+                    lts_raddr <= lts_raddr<63? lts_raddr + 1 : lts_raddr;
+                    if (lts_raddr == 63) begin
+                        smooth_state <= S_SMOOTH_SND_HALF ;
                     end
+                    if (lts_raddr > edge_sc_init) 
+                        lts_div_in_stb <= 1;
+                 
+                end else if (smooth_state == S_SMOOTH_SND_HALF) begin // smooth second half
+                    lts_raddr <= lts_raddr == 63? 1: ( lts_raddr<edge_sc_end? lts_raddr + 1 : lts_raddr); 
+                    if (lts_raddr == 63) 
+                        smooth_state <= S_SMOOTH_EDGE ;
+                    else if (lts_raddr == edge_sc_end) begin
+                        smooth_state <= S_SMOOTH_LAST_SC ;
+                        delay_cnt <= 0;
+                    end                    
+                    if (lts_raddr == 63 || lts_raddr == 1 || lts_raddr > 3)  
+                        lts_div_in_stb <= 1;
+                    else
+                        lts_div_in_stb <= 0;           
+                end else begin // stay on the last SC to wait for sum_i, sum_q gets right value
+                    delay_cnt <= delay_cnt < 3? delay_cnt + 1 : delay_cnt;
+                    if (delay_cnt == 3) 
+                        lts_div_in_stb <= 0 ;
                 end
-
-            end
-
-            // 802.11-2012.pdf: 20.3.9.4.3 Table 20-11
-            // channel estimate smoothing (averaging length = 5)
-            S_SMOOTH_CH_LTS: begin
-                if(lts_raddr == 42) begin
-                    lts_sum_i <= lts_sum_1_3_i;
-                    lts_sum_q <= lts_sum_1_3_q;
-                    lts_mv_avg_len <= 3;
-                    lts_div_in_stb <= 1;
-                end else if(lts_raddr == 43) begin
-                    lts_sum_i <= lts_sum_1_4_i;
-                    lts_sum_q <= lts_sum_1_4_q;
-                    lts_mv_avg_len <= 4;
-                    lts_div_in_stb <= 1;
-                end else if(lts_raddr > 43 || lts_raddr < 29) begin
-                    lts_sum_i <= lts_sum_1_5_i;
-                    lts_sum_q <= lts_sum_1_5_q;
-                    lts_mv_avg_len <= 5;
-                    lts_div_in_stb <= 1;
-                end else if(lts_raddr == 29) begin
-                    lts_sum_i <= lts_sum_2_5_i;
-                    lts_sum_q <= lts_sum_2_5_q;
-                    lts_mv_avg_len <= 4;
-                    lts_div_in_stb <= 1;
-                end else if(lts_raddr == 30) begin
-                    lts_sum_i <= lts_sum_3_5_i;
-                    lts_sum_q <= lts_sum_3_5_q;
-                    lts_mv_avg_len <= 3;
-                    lts_div_in_stb <= 1;
-                end else if(lts_raddr == 31) begin
-                    lts_div_in_stb <= 0;
-                end
-
-                if(lts_raddr >= 38 || lts_raddr <= 30) begin
-                    // LTS Shift register
-                    lts_reg1_i <= lts_i_out; lts_reg2_i <= lts_reg1_i; lts_reg3_i <= lts_reg2_i; lts_reg4_i <= lts_reg3_i; lts_reg5_i <= lts_reg4_i;
-                    lts_reg1_q <= lts_q_out; lts_reg2_q <= lts_reg1_q; lts_reg3_q <= lts_reg2_q; lts_reg4_q <= lts_reg3_q; lts_reg5_q <= lts_reg4_q;
-                    lts_raddr[5:0] <= lts_raddr[5:0] + 1;
-                end
-
+                lts_reg1_i <= lts_i_out; lts_reg2_i <= lts_reg1_i; lts_reg3_i <= lts_reg2_i; 
+                lts_reg1_q <= lts_q_out; lts_reg2_q <= lts_reg1_q; lts_reg3_q <= lts_reg2_q; 
+                lts_sum_i <= lts_sum_1_3_i;
+                lts_sum_q <= lts_sum_1_3_q;
                 if(lts_div_out_stb == 1) begin
                     lts_i_in <= lts_div_i[15:0];
                     lts_q_in <= lts_div_q[15:0];
-                    lts_waddr[5:0] <= lts_waddr[5:0] + 1;
+                    lts_waddr[5:0] <= (lts_waddr[5:0] == 63)? 1: lts_waddr[5:0] + 1;
                 end
                 lts_in_stb <= lts_div_out_stb;
-
-                if(lts_waddr == 26) begin
+                if(lts_waddr == edge_sc_end) begin
                     state <= S_GET_POLARITY;
                 end
             end
-
+                      
             S_GET_POLARITY: begin
                 // obtain the polarity of pilot sub-carriers for next OFDM symbol
                 if (ht) begin
@@ -684,126 +609,27 @@ always @(posedge clock) begin
                     pilot_count1 <= 0; 
                     pilot_count2 <= 0;
                     pilot_count3 <= 0; 
-                    Sxy <= 0;
                     in_raddr <= pilot_loc[0][5:0];  // sample in location, compensate for RAM read delay
                     lts_raddr <= pilot_loc[0][5:0]; // LTS location, compensate for RAM read delay
-                    peg_pilot_scale <= pilot_idx[0]*prev_peg;
-                    state <= S_PILOT_PE_CORRECTION;
-                end
-            end
-
-            S_PILOT_PE_CORRECTION: begin
-                // rotate pilots with accumulated PEG up to previous symbol
-                if (pilot_count1 < 4) begin
-                    if (pilot_count1 < 3) begin
-                        in_raddr <= pilot_loc[pilot_count1+1][5:0];
-                        peg_pilot_scale <= (pilot_idx[pilot_count1+1])*prev_peg;
-                        rot_in_stb <= 1;
-                    end
-                    phase_err <= {cpe[15], cpe[15], cpe[15:0]} + peg_pilot_scale[17:0];
-                    pilot_count1 <= pilot_count1 + 1; 
-                end else begin
-                    rot_in_stb <= 0;
-                end
-
-                if (rot_out_stb && pilot_count2 < 4) begin
-                    if (pilot_count2 < 3) begin
-                        lts_raddr <= pilot_loc[pilot_count2+1][5:0]; 
-                    end
-                    // obtain the conjugate of current pilot sub carrier
-                    if (current_polarity[pilot_count2] == 0) begin
-                        input_i <= rot_i;
-                        input_q <= -rot_q;
-                    end else begin
-                        input_i <= -rot_i;
-                        input_q <= rot_q;
-                    end
-                    pilot_in_stb <= 1;  // start complex mult. with LTS pilot
-                    pilot_count2 <= pilot_count2 + 1; 
-                end else begin
-                    pilot_in_stb <= 0; 
-                end
-
-                if (pilot_out_stb) begin
-                    pilot_i_reg <= pilot_i;
-                    pilot_q_reg <= pilot_q;
-                    phase_in_stb <= 1;
-                end else begin
-                    phase_in_stb <= 0; 
-                end
-
-                if (phase_out_stb && pilot_count3 < 4) begin
-                    pilot_count3 <= pilot_count3 + 1; 
-                    pilot_iq_phase[pilot_count3] <= phase_out;
-                end
-
-                if (pilot_count3 == 4) begin
-                    phase_in_stb <= 0; 
-                    pilot_count1 <= 0; 
-                    pilot_count2 <= 0; 
-                    pilot_count3 <= 0; 
-                    state <= S_LVPE_ESTIMATE; 
-                end
-            end
-
-            S_LVPE_ESTIMATE: begin
-                if (pilot_count1 < 4) begin
-                    // sampling rate offset (SFO) is calculated as pilot phase error
-                    if(pilot_iq_phase[pilot_count1] < -1608) begin
-                        pilot_phase_err <= pilot_iq_phase[pilot_count1] + 3217;
-                    end else if(pilot_iq_phase[pilot_count1] > 1608) begin
-                        pilot_phase_err <= pilot_iq_phase[pilot_count1] - 3217;
-                    end else begin
-                        pilot_phase_err <= pilot_iq_phase[pilot_count1];
-                    end
-
-                    pilot_count1 <= pilot_count1 + 1;
-                end
-
-                if(pilot_count1 == 1) begin
-                    Sxy <= Sxy + 7*pilot_phase_err;
-                end else if(pilot_count1 == 2) begin
-                    Sxy <= Sxy + 21*pilot_phase_err;
-                end else if(pilot_count1 == 3) begin
-                    Sxy <= Sxy + -21*pilot_phase_err;
-                end else if(pilot_count1 == 4) begin
-                    Sxy <= Sxy + -7*pilot_phase_err;
-
                     in_raddr <= 0; 
                     sym_idx <= 0;
-                    sym_idx2 <= 1; 
-                    lvpe_in_stb <= 0;
                     // compensate for RAM read delay
                     lts_raddr <= 1;
                     rot_in_stb <= 0;
                     num_output <= 0;
                     state <= S_ALL_SC_PE_CORRECTION;
                 end
-                // Sx² = ∑(x-x̄)*(x-x̄) = ∑x² = (7² + 21² + (-21)² + (-7)²) = 980
-                // phase error gradient (PEG) = Sxy/Sx²
             end
 
             S_ALL_SC_PE_CORRECTION: begin
                 if (sym_idx < 64) begin
                     sym_idx <= sym_idx + 1;
-                    lvpe_in_stb <= 1;
-                end else begin
-                    lvpe_in_stb <= 0;
-                end
-
-                // first rotate, then normalize by avg LTS
-                if (lvpe_out_stb) begin
-                    sym_idx2 <= sym_idx2 + 1; 
-                    phase_err <= {cpe[15], cpe[15], cpe[15:0]} + lvpe[17:0] + peg_sym_scale[17:0];
                     rot_in_stb <= 1;
-                    in_raddr <= in_raddr + 1;
-                    if (sym_idx2 == 32) begin
-                        // lvpe output is 32*PEG due to sym_idx
-                        prev_peg_reg <= prev_peg_reg + (lvpe >>> 5); 
-                    end
+                    in_raddr <= in_raddr + 1;  
                 end else begin
                     rot_in_stb <= 0;
                 end
+
 
                 if (rot_out_stb) begin
                     lts_raddr <= lts_raddr + 1;
@@ -825,7 +651,6 @@ always @(posedge clock) begin
                 end
 
                 if (num_output == num_data_carrier) begin
-                    prev_peg <= prev_peg_reg; 
                     state <= S_GET_POLARITY;
                 end
             end
@@ -846,13 +671,16 @@ always @(posedge clock) begin
 
                 if (lts_in_stb) begin
                     if (lts_waddr == 63) begin
-                        lts_waddr <= 0;
-                        lts_raddr <= 62;
+                        lts_waddr <= 35;
+                        lts_raddr <= 36;
                         lts_in_stb <= 0;
                         lts_div_in_stb <= 0;
+                        smooth_state <= 0;
+                        delay_cnt <= 0;
+                        lts_mv_avg_len <= 3;                        
                         // Depending on smoothing bit in HT-SIG, smooth the channel
                         if(ht_smoothing==1 && disable_all_smoothing==0) begin
-                            state <= S_SMOOTH_CH_DC;
+                            state <= S_SMOOTH_ACTSC;
                         end else begin
                             state <= S_GET_POLARITY;
                         end
