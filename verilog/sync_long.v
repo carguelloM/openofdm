@@ -28,6 +28,7 @@ module sync_long (
 localparam IN_BUF_LEN_SHIFT = 8;
 
 localparam NUM_STS_TAIL = 32;
+localparam NUM_ADD_SP_TO_SKIP = 22 ; // skip some more samples to avoid consusion caused by CP
 
 reg [15:0] in_offset;
 reg [IN_BUF_LEN_SHIFT-1:0] in_waddr;
@@ -265,7 +266,7 @@ always @(posedge clock) begin
         case(state)
             S_SKIPPING: begin
                 // skip the tail of  short preamble
-                if (num_sample >= NUM_STS_TAIL) begin
+                if (num_sample >= NUM_STS_TAIL + NUM_ADD_SP_TO_SKIP) begin
                     num_sample <= 0;
                     state <= S_WAIT_FOR_FIRST_PEAK;
                 end else if (sample_in_strobe) begin
@@ -281,7 +282,7 @@ always @(posedge clock) begin
                     addr1 <= in_raddr - 1 -fft_win_shift;
                 end
 
-                if (num_sample >= 88) begin
+                if (num_sample >= 62) begin
                     long_preamble_detected <= 1;
                     num_sample <= 0;
                     mult_strobe <= 0;
