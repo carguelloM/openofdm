@@ -153,7 +153,7 @@ end
 ////////////////////////////////////////////////////////////////////////////////
 `DEBUG_PREFIX reg  [3:0] equalizer_state_reg;
 
-assign ofdm_symbol_eq_out_pulse = (equalizer_state==4 && equalizer_state_reg==8);
+assign ofdm_symbol_eq_out_pulse = (equalizer_state==3 && equalizer_state_reg==5);
 
 always @(posedge clock) begin
     if (reset_without_watchdog==1) begin
