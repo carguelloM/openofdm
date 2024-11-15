@@ -290,6 +290,8 @@ set files [list \
  "[file normalize "$origin_dir/verilog/running_sum_dual_ch.v"]"\
  "[file normalize "$origin_dir/verilog/signal_watchdog.v"]"\
  "[file normalize "$origin_dir/verilog/phy_len_calculation.v"]"\
+ "[file normalize "$origin_dir/verilog/rot_after_fft.v"]"\
+ "[file normalize "$origin_dir/ip_repo/div_for_rotafft/div_for_rotafft.xci"]"\
  "[file normalize "$origin_dir/ip_repo/complex_multiplier/complex_multiplier.xci"]"\
  "[file normalize "$origin_dir/ip_repo/atan_lut/atan_lut.coe"]"\
  "[file normalize "$origin_dir/ip_repo/atan_lut/atan_lut.xci"]"\
@@ -896,8 +898,8 @@ puts "INFO: Project created:$project_name"
 #--------to avoid IP error message (parameter error or not found, need to be reported status and upgraded)-------
 update_compile_order -fileset sources_1
 report_ip_status -name ip_status 
-upgrade_ip [get_ips  {atan_lut complex_multiplier deinter_lut div_gen_div_gen_0_0 div_gen_xlslice_0_0 rot_lut viterbi_v7_0 xfft_v9}] -log ip_upgrade.log
-export_ip_user_files -of_objects [get_ips {atan_lut complex_multiplier deinter_lut div_gen_div_gen_0_0 div_gen_xlslice_0_0 rot_lut viterbi_v7_0 xfft_v9}] -no_script -sync -force -quiet
+upgrade_ip [get_ips  {atan_lut complex_multiplier deinter_lut div_gen_div_gen_0_0 div_gen_xlslice_0_0 rot_lut viterbi_v7_0 xfft_v9 div_for_rotafft}] -log ip_upgrade.log
+export_ip_user_files -of_objects [get_ips {atan_lut complex_multiplier deinter_lut div_gen_div_gen_0_0 div_gen_xlslice_0_0 rot_lut viterbi_v7_0 xfft_v9 div_for_rotafft}] -no_script -sync -force -quiet
 
 update_compile_order -fileset sources_1
 report_ip_status -name ip_status 
