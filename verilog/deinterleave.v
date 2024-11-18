@@ -130,19 +130,16 @@ wire lut_done = lut_out[0];
 reg ram_delay;
 reg ht_delayed;
 
-ram_2port #(.DWIDTH(16), .AWIDTH(6)) ram_inst (
-    .clka(clock),
-    .ena(1),
-    .wea(input_strobe),
-    .addra(addra),
-    .dia({in_bits, soft_in_bits, soft_in_bits_pos}),
-    .doa({bit_outa,soft_bit_outa,soft_bit_outa_pos}),
-    .clkb(clock),
-    .enb(1),
-    .web(0),
-    .addrb(addrb),
-    .dib(32'hFFFF),
-    .dob({bit_outb,soft_bit_outb,soft_bit_outb_pos})
+dpram #(.DATA_WIDTH(16), .ADDRESS_WIDTH(6)) ram_inst (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(input_strobe),
+    .write_address(addra),
+    .write_data({in_bits, soft_in_bits, soft_in_bits_pos}),
+    .read_data_a({bit_outa,soft_bit_outa,soft_bit_outa_pos}),
+    .enable_b(1),
+    .read_address(addrb),
+    .read_data({bit_outb,soft_bit_outb,soft_bit_outb_pos})
 );
 
 deinter_lut lut_inst (

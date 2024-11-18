@@ -24,19 +24,16 @@ localparam DELAY_SIZE = 1<<DELAY_SHIFT;
 reg [DELAY_SHIFT-1:0] 	  addr;
 reg full;
 
-ram_2port  #(.DWIDTH(DATA_WIDTH), .AWIDTH(DELAY_SHIFT)) delay_line (
-    .clka(clock),
-    .ena(1),
-    .wea(input_strobe),
-    .addra(addr),
-    .dia(data_in),
-    .doa(),
-    .clkb(clock),
-    .enb(input_strobe),
-    .web(1'b0),
-    .addrb(addr),
-    .dib(32'hFFFF),
-    .dob(data_out)
+dpram  #(.DATA_WIDTH(DATA_WIDTH), .ADDRESS_WIDTH(DELAY_SHIFT)) delay_line (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(input_strobe),
+    .write_address(addr),
+    .write_data(data_in),
+    .read_data_a(),
+    .enable_b(input_strobe),
+    .read_address(addr),
+    .read_data(data_out)
 );
 
 always @(posedge clock) begin

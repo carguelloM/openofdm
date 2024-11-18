@@ -31,19 +31,16 @@ wire signed [SUM_WIDTH-1:0] ext_new_data = {{WINDOW_SHIFT{new_data[DATA_WIDTH-1]
 reg [WINDOW_SHIFT-1:0] addr;
 reg full;
 
-ram_2port  #(.DWIDTH(DATA_WIDTH), .AWIDTH(WINDOW_SHIFT)) delay_line (
-    .clka(clock),
-    .ena(1),
-    .wea(input_strobe),
-    .addra(addr),
-    .dia(data_in),
-    .doa(),
-    .clkb(clock),
-    .enb(input_strobe),
-    .web(0),
-    .addrb(addr),
-    .dib(32'hFFFF),
-    .dob(old_data)
+dpram  #(.DATA_WIDTH(DATA_WIDTH), .ADDRESS_WIDTH(WINDOW_SHIFT)) delay_line (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(input_strobe),
+    .write_address(addr),
+    .write_data(data_in),
+    .read_data_a(),
+    .enable_b(input_strobe),
+    .read_address(addr),
+    .read_data(old_data)
 );
 
 integer i;

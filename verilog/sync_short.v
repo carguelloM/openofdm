@@ -70,14 +70,6 @@ reg [31:0] neg_count;
 reg [31:0] min_neg;
 reg has_neg;
 
-//wire [31:0] min_plateau;
-
-// minimal number of samples that has to exceed plateau threshold to claim
-// a short preamble
-/*setting_reg #(.my_addr(SR_MIN_PLATEAU), .width(32), .at_reset(100)) sr_0 (
-    .clk(clock), .rst(reset), .strobe(set_stb), .addr(set_addr), .in(set_data),
-    .out(min_plateau), .changed());*/
-
 complex_to_mag_sq mag_sq_inst (
     .clock(clock),
     .enable(enable),

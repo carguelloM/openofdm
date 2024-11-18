@@ -344,25 +344,6 @@ assign byte_reversed[7] = byte_out[0];
 
 reg [15:0] sync_long_out_count;
 
-/*
-power_trigger power_trigger_inst (
-    .clock(clock),
-    .enable(enable),
-    .reset(reset),
-
-    .sample_in(sample_in),
-    .sample_in_strobe(sample_in_strobe),
-
-    .power_thres(power_thres),
-    .window_size(window_size),
-    .num_sample_to_skip(num_sample_to_skip),
-    .num_sample_changed(num_sample_changed),
-
-    .pw_state_spy(pw_state_spy),
-    .trigger(power_trigger)
-);
-*/
-
 sync_short sync_short_inst (
     .clock(clock),
     .reset(reset | sync_short_reset),

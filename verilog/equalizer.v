@@ -218,19 +218,16 @@ always @(posedge clock) begin
     end
 end
 
-ram_2port #(.DWIDTH(32), .AWIDTH(6)) lts_inst (
-    .clka(clock),
-    .ena(1),
-    .wea(lts_in_stb),
-    .addra(lts_waddr),
-    .dia({lts_i_in, lts_q_in}),
-    .doa(),
-    .clkb(clock),
-    .enb(1),
-    .web(1'b0),
-    .addrb(lts_raddr[5:0]),
-    .dib(32'hFFFF),
-    .dob({lts_i_out, lts_q_out})
+dpram #(.DATA_WIDTH(32), .ADDRESS_WIDTH(6)) lts_inst (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(lts_in_stb),
+    .write_address(lts_waddr),
+    .write_data({lts_i_in, lts_q_in}),
+    .read_data_a(),
+    .enable_b(1),
+    .read_address(lts_raddr[5:0]),
+    .read_data({lts_i_out, lts_q_out})
 );
 
 calc_mean lts_i_inst (
@@ -260,19 +257,16 @@ calc_mean lts_q_inst (
     .c(new_lts_q)
 );
 
-ram_2port  #(.DWIDTH(32), .AWIDTH(6)) in_buf_inst (
-    .clka(clock),
-    .ena(1),
-    .wea(sample_in_strobe),
-    .addra(in_waddr),
-    .dia(sample_in),
-    .doa(),
-    .clkb(clock),
-    .enb(1),
-    .web(1'b0),
-    .addrb(in_raddr[5:0]),
-    .dib(32'hFFFF),
-    .dob({buf_i_out, buf_q_out})
+dpram  #(.DATA_WIDTH(32), .ADDRESS_WIDTH(6)) in_buf_inst (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(sample_in_strobe),
+    .write_address(in_waddr),
+    .write_data(sample_in),
+    .read_data_a(),
+    .enable_b(1),
+    .read_address(in_raddr[5:0]),
+    .read_data({buf_i_out, buf_q_out})
 );
 
 complex_mult pilot_inst (

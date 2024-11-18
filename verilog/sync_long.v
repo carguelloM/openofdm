@@ -163,19 +163,16 @@ wire event_data_out_channel_halt;
 wire s_axis_config_tready;
 wire m_axis_data_tlast;
 
-ram_2port  #(.DWIDTH(32), .AWIDTH(IN_BUF_LEN_SHIFT)) in_buf (
-    .clka(clock),
-    .ena(1),
-    .wea(sample_in_strobe),
-    .addra(in_waddr),
-    .dia(sample_in),
-    .doa(),
-    .clkb(clock),
-    .enb(fft_start | fft_loading),
-    .web(1'b0),
-    .addrb(in_raddr),
-    .dib(32'hFFFF),
-    .dob({raw_i, raw_q})
+dpram  #(.DATA_WIDTH(32), .ADDRESS_WIDTH(IN_BUF_LEN_SHIFT)) in_buf (
+    .clock(clock),
+    .enable_a(1),
+    .write_enable(sample_in_strobe),
+    .write_address(in_waddr),
+    .write_data(sample_in),
+    .read_data_a(),
+    .enable_b(fft_start | fft_loading),
+    .read_address(in_raddr),
+    .read_data({raw_i, raw_q})
 );
 
 rotate rotate_inst (
