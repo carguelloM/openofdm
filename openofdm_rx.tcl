@@ -281,7 +281,7 @@ set files [list \
  "[file normalize "$origin_dir/verilog/ofdm_decoder.v"]"\
  "[file normalize "$origin_dir/verilog/openofdm_rx_s_axi.v"]"\
  "[file normalize "$origin_dir/verilog/phase.v"]"\
- "[file normalize "$origin_dir/verilog/usrp2/ram_2port.v"]"\
+ "[file normalize "$origin_dir/verilog/dpram.v"]"\
  "[file normalize "$origin_dir/verilog/rotate.v"]"\
  "[file normalize "$origin_dir/verilog/stage_mult.v"]"\
  "[file normalize "$origin_dir/verilog/sync_long.v"]"\

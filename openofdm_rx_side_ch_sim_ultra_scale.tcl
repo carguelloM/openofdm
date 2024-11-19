@@ -173,7 +173,7 @@ set files [list \
  [file normalize "${origin_dir}/../openofdminternal/verilog/ofdm_decoder.v"] \
  [file normalize "${origin_dir}/../openofdminternal/verilog/openofdm_rx_s_axi.v"] \
  [file normalize "${origin_dir}/../openofdminternal/verilog/phase.v"] \
- [file normalize "${origin_dir}/../openofdminternal/verilog/usrp2/ram_2port.v"] \
+ [file normalize "${origin_dir}/../openofdminternal/verilog/dpram.v"] \
  [file normalize "${origin_dir}/../openofdminternal/verilog/rotate.v"] \
  [file normalize "${origin_dir}/../openofdminternal/verilog/stage_mult.v"] \
  [file normalize "${origin_dir}/../openofdminternal/verilog/sync_long.v"] \
