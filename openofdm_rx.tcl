@@ -259,6 +259,7 @@ update_ip_catalog -rebuild
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
+ "[file normalize "$origin_dir/verilog/dot11_setting_agent.v"]"\
  "[file normalize "$origin_dir/verilog/bits_to_bytes.v"]"\
  "[file normalize "$origin_dir/verilog/calc_mean.v"]"\
  "[file normalize "$origin_dir/verilog/complex_mult.v"]"\
