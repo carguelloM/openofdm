@@ -28,7 +28,7 @@ module openofdm_rx #
   input  wire signed [(RSSI_HALF_DB_WIDTH-1):0] rssi_half_db,
   input  wire [(2*IQ_DATA_WIDTH-1):0] sample_in,
   input  wire sample_in_strobe,
-  input wire [15:0] Fc_in_MHz,
+  `DEBUG_PREFIX input wire [15:0] Fc_in_MHz,
 
   output wire demod_is_ongoing, // this needs to be corrected further to indicate actual RF on going regardless the latency
   //    output wire pkt_ht,
@@ -52,7 +52,7 @@ module openofdm_rx #
   // for side channel
   output wire [31:0] csi,
   output wire csi_valid,
-  output wire signed [31:0] phase_offset_taken,
+  output wire [31:0] phase_offset_taken,
   output wire [31:0] equalizer,
   output wire equalizer_valid,
   output wire ofdm_symbol_eq_out_pulse,
@@ -106,11 +106,11 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg15; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg16; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19; */
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18; */
+	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg20; // read openofdm rx core internal state
-  /*
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg21; 
+  /*
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg22; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg23; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg24; 
@@ -129,6 +129,10 @@ module openofdm_rx #
   `DEBUG_PREFIX wire [4:0] state;
 
   `DEBUG_PREFIX wire signal_watchdog_enable;
+
+  `DEBUG_PREFIX wire signed [15:0] phase_offset_for_reg_read;
+  `DEBUG_PREFIX wire signed [15:0] phase_offset_taken_internal;
+
   wire power_trigger;
   wire sig_valid = (pkt_header_valid_strobe&pkt_header_valid);
   wire receiver_rst;
@@ -138,6 +142,10 @@ module openofdm_rx #
   assign rx_sensitivity_th = (trigger_mode_setting_en?{1'b0,rx_sensitivity_th_lock}:slv_reg2[(RSSI_HALF_DB_WIDTH-1):0]);
 
   assign signal_watchdog_enable = (state <= S_DECODE_SIGNAL);
+
+  assign phase_offset_taken = {{(16){phase_offset_taken_internal[15]}}, phase_offset_taken_internal};
+
+  assign slv_reg21 = {Fc_in_MHz, phase_offset_for_reg_read};
 
   dot11_setting_agent # (
     .RSSI_HALF_DB_WIDTH_UNSIGNED(RSSI_HALF_DB_WIDTH-1)
@@ -235,7 +243,7 @@ module openofdm_rx #
 
     // sync short
     .short_preamble_detected(short_preamble_detected),
-    .phase_offset(),
+    .phase_offset(phase_offset_for_reg_read),
 
     // sync long
     .sync_long_metric(),
@@ -243,7 +251,8 @@ module openofdm_rx #
     .long_preamble_detected(long_preamble_detected),
     .sync_long_out(),
     .sync_long_out_strobe(),
-    .phase_offset_taken(phase_offset_taken),
+    .phase_offset_override_en(slv_reg19[31]),
+    .phase_offset_override_val(slv_reg19[15:0]),
     .sync_long_state(),
     .fft_win_shift(slv_reg5[3:0]),
 
@@ -341,10 +350,10 @@ module openofdm_rx #
     .SLV_REG15(slv_reg15),
     .SLV_REG16(slv_reg16),
     .SLV_REG17(slv_reg17),
-    .SLV_REG18(slv_reg18),
-    .SLV_REG19(slv_reg19),*/
-    .SLV_REG20(slv_reg20),/*
-    .SLV_REG21(slv_reg21),
+    .SLV_REG18(slv_reg18),*/
+    .SLV_REG19(slv_reg19),
+    .SLV_REG20(slv_reg20),
+    .SLV_REG21(slv_reg21),/*
     .SLV_REG22(slv_reg22),
     .SLV_REG23(slv_reg23),
     .SLV_REG24(slv_reg24),

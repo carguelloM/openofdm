@@ -35,10 +35,10 @@
         output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG15,
         output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG16,
         output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG17,
-        output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG18,
-        output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG19,*/
-        input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG20,/*
-        input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG21,
+        output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG18,*/
+        output wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG19,
+        input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG20,
+        input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG21,/*
         input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG22,
         input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG23,
         input  wire [C_S_AXI_DATA_WIDTH-1:0] SLV_REG24,
@@ -155,10 +155,10 @@
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg15;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg16;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg17;
-	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg18;
-	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg19;*/
-	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg20;/*
-	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg21;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg18;*/
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg19;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg20;
+	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg21;/*
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg22;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg23;
 	reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg24;
@@ -203,8 +203,8 @@
     assign SLV_REG15 = slv_reg15;
     assign SLV_REG16 = slv_reg16;
     assign SLV_REG17 = slv_reg17;
-    assign SLV_REG18 = slv_reg18;
-    assign SLV_REG19 = slv_reg19;*/
+    assign SLV_REG18 = slv_reg18;*/
+    assign SLV_REG19 = slv_reg19;
 	// Implement axi_awready generation
 	// axi_awready is asserted for one S_AXI_ACLK clock cycle when both
 	// S_AXI_AWVALID and S_AXI_WVALID are asserted. axi_awready is
@@ -312,8 +312,8 @@
 	      slv_reg15 <= 32'h0;
 	      slv_reg16 <= 32'h0;
 	      slv_reg17 <= 32'h0;
-	      slv_reg18 <= 32'h0;
-	      slv_reg19 <= 32'h0;*/
+	      slv_reg18 <= 32'h0;*/
+	      slv_reg19 <= 32'h0;
 	    end 
 	  else begin
 	    if (slv_reg_wren)
@@ -451,14 +451,14 @@
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 18
 	                slv_reg18[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
+	              end  */
 	          5'h13:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
 	                // Respective byte enables are asserted as per write strobes 
 	                // Slave register 19
 	                slv_reg19[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
-	              end  
+	              end  /*
 	          5'h14:
 	            for ( byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index+1 )
 	              if ( S_AXI_WSTRB[byte_index] == 1 ) begin
@@ -562,8 +562,8 @@
 	                      slv_reg15 <= slv_reg15;
 	                      slv_reg16 <= slv_reg16;
 	                      slv_reg17 <= slv_reg17;
-	                      slv_reg18 <= slv_reg18;
-	                      slv_reg19 <= slv_reg19;*/
+	                      slv_reg18 <= slv_reg18;*/
+	                      slv_reg19 <= slv_reg19;
 	                      //slv_reg20 <= slv_reg20;
 	                      //slv_reg21 <= slv_reg21;
 	                      //slv_reg22 <= slv_reg22;
@@ -702,10 +702,10 @@
 	        5'h0F   : reg_data_out <= slv_reg15;
 	        5'h10   : reg_data_out <= slv_reg16;
 	        5'h11   : reg_data_out <= slv_reg17;
-	        5'h12   : reg_data_out <= slv_reg18;
-	        5'h13   : reg_data_out <= slv_reg19;*/
-	        5'h14   : reg_data_out <= slv_reg20;/*
-	        5'h15   : reg_data_out <= slv_reg21;
+	        5'h12   : reg_data_out <= slv_reg18;*/
+	        5'h13   : reg_data_out <= slv_reg19;
+	        5'h14   : reg_data_out <= slv_reg20;
+	        5'h15   : reg_data_out <= slv_reg21;/*
 	        5'h16   : reg_data_out <= slv_reg22;
 	        5'h17   : reg_data_out <= slv_reg23;
 	        5'h18   : reg_data_out <= slv_reg24;
@@ -744,8 +744,8 @@
     begin
       if ( S_AXI_ARESETN == 1'b0 )
         begin
-          slv_reg20 <= 32'h0;/*
-          slv_reg21 <= 32'h0;
+          slv_reg20 <= 32'h0;
+          slv_reg21 <= 32'h0;/*
           slv_reg22 <= 32'h0;
           slv_reg23 <= 32'h0;
           slv_reg24 <= 32'h0;
@@ -759,8 +759,8 @@
         end 
       else
         begin    
-          slv_reg20 <= SLV_REG20;/*
-          slv_reg21 <= SLV_REG21;
+          slv_reg20 <= SLV_REG20;
+          slv_reg21 <= SLV_REG21;/*
           slv_reg22 <= SLV_REG22;
           slv_reg23 <= SLV_REG23;
           slv_reg24 <= SLV_REG24;

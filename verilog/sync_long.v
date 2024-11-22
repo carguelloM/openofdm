@@ -1,3 +1,11 @@
+`include "openofdm_rx_pre_def.v"
+
+`ifdef OPENOFDM_RX_ENABLE_DBG
+`define DEBUG_PREFIX (*mark_debug="true",DONT_TOUCH="TRUE"*)
+`else
+`define DEBUG_PREFIX
+`endif
+
 module sync_long (
     input clock,
     input reset,
@@ -5,7 +13,7 @@ module sync_long (
 
     input [31:0] sample_in,
     input sample_in_strobe,
-    input signed [15:0] phase_offset,
+    `DEBUG_PREFIX input signed [15:0] phase_offset_input,
     input short_gi,
     input [3:0] fft_win_shift,
 
@@ -20,7 +28,9 @@ module sync_long (
     output reg sample_out_strobe,
     output reg [15:0] num_ofdm_symbol,
 
-    output reg signed [31:0] phase_offset_taken,
+    `DEBUG_PREFIX input phase_offset_override_en,
+    `DEBUG_PREFIX input signed [15:0] phase_offset_override_val,
+    output reg signed [15:0] phase_offset_taken,
     output reg [1:0] state
 );
 `include "common_params.v"
@@ -56,6 +66,10 @@ reg signed [31:0] next_phase_correction;
 
 reg reset_delay ; // add reset signal for fft, somehow all kinds of event flag raises when feeding real rf signal, maybe reset will help
 wire fft_resetn ;
+
+`DEBUG_PREFIX wire signed [15:0] phase_offset;
+
+assign phase_offset = (phase_offset_override_en?phase_offset_override_val:phase_offset_input);
 
 always @(posedge clock) begin
     reset_delay = reset ;

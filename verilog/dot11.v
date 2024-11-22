@@ -67,7 +67,7 @@ module dot11 (
 
     // sync short
     `DEBUG_PREFIX output short_preamble_detected,
-    `DEBUG_PREFIX output [15:0] phase_offset,
+    `DEBUG_PREFIX output signed [15:0] phase_offset,
 
     // sync long
     `DEBUG_PREFIX output [31:0] sync_long_metric,
@@ -75,7 +75,9 @@ module dot11 (
     `DEBUG_PREFIX output long_preamble_detected,
     `DEBUG_PREFIX output [31:0] sync_long_out,
     `DEBUG_PREFIX output sync_long_out_strobe,
-    `DEBUG_PREFIX output wire signed [31:0] phase_offset_taken,
+    `DEBUG_PREFIX input  phase_offset_override_en,
+    `DEBUG_PREFIX input  signed [15:0] phase_offset_override_val,
+    `DEBUG_PREFIX output wire signed [15:0] phase_offset_taken,
     `DEBUG_PREFIX output [2:0] sync_long_state,
 
     // equalizer
@@ -374,7 +376,7 @@ sync_long sync_long_inst (
 
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
-    .phase_offset(phase_offset),
+    .phase_offset_input(phase_offset),
     .short_gi(short_gi),
     .fft_win_shift(fft_win_shift),
 
@@ -384,6 +386,8 @@ sync_long sync_long_inst (
     .metric(sync_long_metric),
     .metric_stb(sync_long_metric_stb),
     .long_preamble_detected(long_preamble_detected),
+    .phase_offset_override_en(phase_offset_override_en),
+    .phase_offset_override_val(phase_offset_override_val),
     .phase_offset_taken(phase_offset_taken),
     .state(sync_long_state),
 
