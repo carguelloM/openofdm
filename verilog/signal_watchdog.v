@@ -89,7 +89,7 @@ module signal_watchdog
 
     assign equalizer_monitor_rst = ( (small_abs_eq_i_counter>=small_eq_out_counter_th) && (small_abs_eq_q_counter>=small_eq_out_counter_th) );
 
-    assign receiver_rst = ( enable & power_trigger & sync_short_phase_offset_monitor_rst & ( equalizer_monitor_rst | receiver_rst_reg | (sig_valid && (signal_len<min_signal_len_th || signal_len>max_signal_len_th)) ) );
+    assign receiver_rst = ( enable & power_trigger & ( sync_short_phase_offset_monitor_rst | equalizer_monitor_rst | receiver_rst_reg | (sig_valid && (signal_len<min_signal_len_th || signal_len>max_signal_len_th)) ) );
     
     // abnormal signal monitor
     always @(posedge clk) begin
@@ -145,5 +145,5 @@ module signal_watchdog
         sync_short_phase_offset_monitor_rst <= (short_preamble_detected?(phase_offset_abs>phase_offset_abs_th):0);
       end
     end
-    
+
 endmodule
