@@ -37,6 +37,10 @@ module signal_watchdog
 		`DEBUG_PREFIX input wire [31:0] equalizer,
 		`DEBUG_PREFIX input wire equalizer_valid,
 
+    `DEBUG_PREFIX input wire signed [15:0] phase_offset,
+    `DEBUG_PREFIX input wire short_preamble_detected,
+    `DEBUG_PREFIX input wire [16:0] phase_offset_abs_th,
+
     `DEBUG_PREFIX output receiver_rst
 );
 `include "common_params.v"
@@ -62,13 +66,20 @@ module signal_watchdog
     `DEBUG_PREFIX reg [5:0] small_abs_eq_q_counter;
     `DEBUG_PREFIX wire equalizer_monitor_rst;
 
+    `DEBUG_PREFIX wire signed [16:0] phase_offset_sign_ext;
+    `DEBUG_PREFIX wire [16:0] phase_offset_abs;
+    `DEBUG_PREFIX reg sync_short_phase_offset_monitor_rst;
+
+    assign phase_offset_sign_ext = {phase_offset[15], phase_offset};
+    assign phase_offset_abs = ((phase_offset_sign_ext[16]==1'b1)?(-phase_offset_sign_ext):(phase_offset_sign_ext));
+
     assign i_sign = (i_data == 0? fake_non_dc_in_case_all_zero : (i_data[(IQ_DATA_WIDTH-1)] ? -1 : 1) );
     assign q_sign = (q_data == 0? fake_non_dc_in_case_all_zero : (q_data[(IQ_DATA_WIDTH-1)] ? -1 : 1) );
 
     assign running_sum_result_i_abs = (running_sum_result_i[LOG2_SUM_LEN+2-1]?(-running_sum_result_i):running_sum_result_i);
     assign running_sum_result_q_abs = (running_sum_result_q[LOG2_SUM_LEN+2-1]?(-running_sum_result_q):running_sum_result_q);
 
-    assign receiver_rst_internal = (enable&(running_sum_result_i_abs>=dc_running_sum_th || running_sum_result_q_abs>=dc_running_sum_th));
+    assign receiver_rst_internal = (running_sum_result_i_abs>=dc_running_sum_th || running_sum_result_q_abs>=dc_running_sum_th);
 
     assign receiver_rst_pulse = (receiver_rst_internal&&(~receiver_rst_reg));
 
@@ -78,8 +89,8 @@ module signal_watchdog
 
     assign equalizer_monitor_rst = ( (small_abs_eq_i_counter>=small_eq_out_counter_th) && (small_abs_eq_q_counter>=small_eq_out_counter_th) );
 
-    assign receiver_rst = ( power_trigger & ( equalizer_monitor_rst | receiver_rst_reg | (sig_valid && (signal_len<min_signal_len_th || signal_len>max_signal_len_th)) ) );
-
+    assign receiver_rst = ( enable & power_trigger & sync_short_phase_offset_monitor_rst & ( equalizer_monitor_rst | receiver_rst_reg | (sig_valid && (signal_len<min_signal_len_th || signal_len>max_signal_len_th)) ) );
+    
     // abnormal signal monitor
     always @(posedge clk) begin
       if (~rstn) begin
@@ -126,4 +137,13 @@ module signal_watchdog
       end
     end
 
+    // sync short phase offset monitor
+    always @(posedge clk) begin
+      if (~rstn) begin
+        sync_short_phase_offset_monitor_rst <= 0;
+      end else begin
+        sync_short_phase_offset_monitor_rst <= (short_preamble_detected?(phase_offset_abs>phase_offset_abs_th):0);
+      end
+    end
+    
 endmodule

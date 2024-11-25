@@ -105,8 +105,8 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg14; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg15; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg16; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18; */
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17; */ 
+	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18;
 	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg20; // read openofdm rx core internal state
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg21; 
@@ -141,7 +141,7 @@ module openofdm_rx #
 
   assign rx_sensitivity_th = (trigger_mode_setting_en?{1'b0,rx_sensitivity_th_lock}:slv_reg2[(RSSI_HALF_DB_WIDTH-1):0]);
 
-  assign signal_watchdog_enable = (state <= S_DECODE_SIGNAL);
+  assign signal_watchdog_enable = ((state <= S_DECODE_SIGNAL) & (~slv_reg1[13]));
 
   assign phase_offset_taken = {{(16){phase_offset_taken_internal[15]}}, phase_offset_taken_internal};
 
@@ -184,6 +184,11 @@ module openofdm_rx #
     .state(state),
     .equalizer(equalizer),
     .equalizer_valid(equalizer_valid),
+
+    // frequency offset monitor: too big fo estimated by sync_short means sth wrong
+    .phase_offset(phase_offset_for_reg_read),
+    .short_preamble_detected(short_preamble_detected),
+    .phase_offset_abs_th(slv_reg18[16:0]),
 
     .receiver_rst(receiver_rst)
   );
@@ -349,8 +354,8 @@ module openofdm_rx #
     .SLV_REG14(slv_reg14),
     .SLV_REG15(slv_reg15),
     .SLV_REG16(slv_reg16),
-    .SLV_REG17(slv_reg17),
-    .SLV_REG18(slv_reg18),*/
+    .SLV_REG17(slv_reg17),*/
+    .SLV_REG18(slv_reg18),
     .SLV_REG19(slv_reg19),
     .SLV_REG20(slv_reg20),
     .SLV_REG21(slv_reg21),/*
