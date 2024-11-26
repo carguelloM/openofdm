@@ -208,6 +208,10 @@ complex_to_mag #(.DATA_WIDTH(32)) delay_prod_avg_mag_inst (
     .mag_stb(delay_prod_avg_mag_stb)
 );
 
+initial begin 
+  phase_offset = 0;
+end
+
 always @(posedge clock) begin
     if (reset) begin
         reset_delay1 <= reset;
