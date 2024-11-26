@@ -16,7 +16,8 @@ module openofdm_rx #
   parameter integer RSSI_HALF_DB_WIDTH = 11,
 
   parameter integer C_S00_AXI_DATA_WIDTH  = 32,
-  parameter integer C_S00_AXI_ADDR_WIDTH  = 7
+  parameter integer C_S00_AXI_ADDR_WIDTH  = 7,
+  parameter integer WATCHDOG_COUNTER_WIDTH = 22
 )
 (
   input wire trigger_mode_setting_en,
@@ -104,8 +105,8 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg13; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg14; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg15; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg16; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17; */ 
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg16; */  
+	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17;
 	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18;
 	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg20; // read openofdm rx core internal state
@@ -119,9 +120,12 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg27; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg28; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg29; 
-  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg30; 
-  */
+*/	
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg30;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg31; 
+
+  wire slv_reg_wren_signal;
+	wire [4:0] axi_awaddr_core;
 
   `DEBUG_PREFIX wire [(RSSI_HALF_DB_WIDTH-2):0] rx_sensitivity_th_lock;
   `DEBUG_PREFIX wire [(RSSI_HALF_DB_WIDTH-1):0] rx_sensitivity_th;
@@ -159,7 +163,9 @@ module openofdm_rx #
     .rx_sensitivity_th_lock(rx_sensitivity_th_lock)
   );
 
-  signal_watchdog signal_watchdog_inst (
+  signal_watchdog # (
+    .COUNTER_WIDTH(WATCHDOG_COUNTER_WIDTH)
+  ) signal_watchdog_inst (
     .clk(s00_axi_aclk),
     .rstn(s00_axi_aresetn),
     // .enable(~demod_is_ongoing),
@@ -189,6 +195,11 @@ module openofdm_rx #
     .phase_offset(phase_offset_for_reg_read),
     .short_preamble_detected(short_preamble_detected),
     .phase_offset_abs_th(slv_reg18[16:0]),
+
+    .event_selector(slv_reg17[2:0]),
+    .event_counter(slv_reg30[(WATCHDOG_COUNTER_WIDTH-1):0]),
+    .slv_reg_wren_signal(slv_reg_wren_signal),
+    .axi_awaddr_core(axi_awaddr_core),
 
     .receiver_rst(receiver_rst)
   );
@@ -337,6 +348,9 @@ module openofdm_rx #
     .S_AXI_RVALID(s00_axi_rvalid),
     .S_AXI_RREADY(s00_axi_rready),
 
+    .slv_reg_wren_signal(slv_reg_wren_signal),
+    .axi_awaddr_core(axi_awaddr_core),
+
     .SLV_REG0(slv_reg0),
     .SLV_REG1(slv_reg1),
     .SLV_REG2(slv_reg2),
@@ -353,8 +367,8 @@ module openofdm_rx #
     .SLV_REG13(slv_reg13),
     .SLV_REG14(slv_reg14),
     .SLV_REG15(slv_reg15),
-    .SLV_REG16(slv_reg16),
-    .SLV_REG17(slv_reg17),*/
+    .SLV_REG16(slv_reg16),*/
+    .SLV_REG17(slv_reg17)
     .SLV_REG18(slv_reg18),
     .SLV_REG19(slv_reg19),
     .SLV_REG20(slv_reg20),
@@ -366,8 +380,8 @@ module openofdm_rx #
     .SLV_REG26(slv_reg26),
     .SLV_REG27(slv_reg27),
     .SLV_REG28(slv_reg28),
-    .SLV_REG29(slv_reg29),
-    .SLV_REG30(slv_reg30),*/
+    .SLV_REG29(slv_reg29),*/
+    .SLV_REG30(slv_reg30),
     .SLV_REG31(slv_reg31)
   );
   
