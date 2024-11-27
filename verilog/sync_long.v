@@ -257,6 +257,11 @@ xfft_v9 dft_inst (
 
 reg [15:0] num_sample;
 
+initial begin 
+    phase_correction <= 0;
+    next_phase_correction <= 0;
+end
+
 integer i;
 integer j;
 always @(posedge clock) begin
