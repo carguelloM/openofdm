@@ -630,6 +630,10 @@ dot11 dot11_inst (
   .short_preamble_detected(short_preamble_detected),
   .phase_offset(phase_offset_for_reg_read),
 
+  // sync long
+  .phase_offset_override_en(0),
+  .phase_offset_override_val(0),
+
   .equalizer_out(equalizer),
 
   .equalizer_out_strobe(equalizer_valid)
