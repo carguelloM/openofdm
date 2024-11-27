@@ -285,7 +285,10 @@ reg short_gi;
 
 reg [4:0] old_state;
 
-assign power_trigger = (rssi_half_db>=power_thres? 1: 0);
+reg signed [10:0] power_thres_delay;
+reg signed [10:0] rssi_half_db_delay;
+
+assign power_trigger = (rssi_half_db_delay>=power_thres_delay? 1: 0);
 assign state_changed = state != old_state;
 
 // SIGNAL information
@@ -588,8 +591,14 @@ always @(posedge clock) begin
 
         fcs_out_strobe <= 0;
         fcs_ok <= 0;
+
+        power_thres_delay <= 0;
+        rssi_half_db_delay <= 0;
     end else if (enable) begin
         old_state <= state;
+
+        power_thres_delay <= power_thres;
+        rssi_half_db_delay <= rssi_half_db;
 
         case(state)
             S_WAIT_POWER_TRIGGER: begin
@@ -652,10 +661,11 @@ always @(posedge clock) begin
                     sync_short_reset <= 1;
                 end
 
-                if (~power_trigger) begin
-                    state <= S_WAIT_POWER_TRIGGER;
-                    sync_short_reset <= 1;
-                end
+                // Maybe not necessary to check power_trigger in many states, which causes high fan out
+                // if (~power_trigger) begin
+                //     state <= S_WAIT_POWER_TRIGGER;
+                //     sync_short_reset <= 1;
+                // end
 
                 if (long_preamble_detected) begin
                     demod_is_ongoing <= 1;
