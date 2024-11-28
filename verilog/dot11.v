@@ -208,11 +208,11 @@ rot_lut rot_lut_inst (
 ////////////////////////////////////////////////////////////////////////////////
 // Shared phase module for sync_short and equalizer
 ////////////////////////////////////////////////////////////////////////////////
-wire [31:0] sync_short_phase_in_i;
-wire [31:0] sync_short_phase_in_q;
-wire sync_short_phase_in_stb;
-wire [15:0] sync_short_phase_out;
-wire sync_short_phase_out_stb;
+// wire [31:0] sync_short_phase_in_i;
+// wire [31:0] sync_short_phase_in_q;
+// wire sync_short_phase_in_stb;
+// wire [15:0] sync_short_phase_out;
+// wire sync_short_phase_out_stb;
 
 wire [31:0] sync_long_phase_in_i;
 wire [31:0] sync_long_phase_in_q;
@@ -368,12 +368,12 @@ sync_short sync_short_inst (
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
 
-    .phase_in_i(sync_short_phase_in_i),
-    .phase_in_q(sync_short_phase_in_q),
-    .phase_in_stb(sync_short_phase_in_stb),
+    // .phase_in_i(sync_short_phase_in_i),
+    // .phase_in_q(sync_short_phase_in_q),
+    // .phase_in_stb(sync_short_phase_in_stb),
 
-    .phase_out(sync_short_phase_out),
-    .phase_out_stb(sync_short_phase_out_stb),
+    // .phase_out(sync_short_phase_out),
+    // .phase_out_stb(sync_short_phase_out_stb),
 
     .demod_is_ongoing(demod_is_ongoing),
     .short_preamble_detected(short_preamble_detected)

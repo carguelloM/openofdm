@@ -18,16 +18,16 @@ module sync_short (
     input sample_in_strobe,
 
     input demod_is_ongoing,
-    output reg short_preamble_detected,
+    output reg short_preamble_detected
 
-    input [15:0] phase_out,
-    input phase_out_stb,
+    // input [15:0] phase_out,
+    // input phase_out_stb,
 
-    output [31:0] phase_in_i,
-    output [31:0] phase_in_q,
-    output phase_in_stb,
+    // output [31:0] phase_in_i,
+    // output [31:0] phase_in_q,
+    // output phase_in_stb,
 
-    output reg signed [15:0] phase_offset
+    // output reg signed [15:0] phase_offset
 );
 `include "common_params.v"
 
@@ -58,8 +58,8 @@ wire prod_stb;
 wire [63:0] prod_avg;
 wire prod_avg_stb;
 
-reg [15:0] phase_out_neg;
-reg [15:0] phase_offset_neg;
+// reg [15:0] phase_out_neg;
+// reg [15:0] phase_offset_neg;
 
 wire [31:0] delay_prod_avg_mag;
 wire delay_prod_avg_mag_stb;
@@ -182,19 +182,19 @@ mv_avg_dual_ch #(.DATA_WIDTH0(32), .DATA_WIDTH1(32), .LOG2_AVG_LEN(WINDOW_SHIFT)
     .data_out_valid(prod_avg_stb)
 );
 
-mv_avg_dual_ch #(.DATA_WIDTH0(32), .DATA_WIDTH1(32), .LOG2_AVG_LEN(6)) freq_offset_inst (
-    .clk(clock),
-    .rstn(~(reset|reset_delay1|reset_delay2|reset_delay3|reset_delay4)),
-    // .rstn(~reset),
+// mv_avg_dual_ch #(.DATA_WIDTH0(32), .DATA_WIDTH1(32), .LOG2_AVG_LEN(6)) freq_offset_inst (
+//     .clk(clock),
+//     .rstn(~(reset|reset_delay1|reset_delay2|reset_delay3|reset_delay4)),
+//     // .rstn(~reset),
     
-    .data_in0(prod[63:32]),
-    .data_in1(prod[31:0]),
-    .data_in_valid(prod_stb),
+//     .data_in0(prod[63:32]),
+//     .data_in1(prod[31:0]),
+//     .data_in_valid(prod_stb),
 
-    .data_out0(phase_in_i),
-    .data_out1(phase_in_q),
-    .data_out_valid(phase_in_stb)
-);
+//     .data_out0(phase_in_i),
+//     .data_out1(phase_in_q),
+//     .data_out_valid(phase_in_stb)
+// );
 
 complex_to_mag #(.DATA_WIDTH(32)) delay_prod_avg_mag_inst (
     .clock(clock),
@@ -207,10 +207,6 @@ complex_to_mag #(.DATA_WIDTH(32)) delay_prod_avg_mag_inst (
     .mag(delay_prod_avg_mag),
     .mag_stb(delay_prod_avg_mag_stb)
 );
-
-initial begin 
-  phase_offset = 0;
-end
 
 always @(posedge clock) begin
     if (reset) begin
@@ -234,7 +230,7 @@ always @(posedge clock) begin
 
         plateau_count <= 0;
         short_preamble_detected <= 0;
-        phase_offset <= phase_offset; // do not clear it. sync short will reset soon after stf detected, but sync long still needs it.
+        // phase_offset <= phase_offset; // do not clear it. sync short will reset soon after stf detected, but sync long still needs it.
     end else if (enable) begin
         reset_delay4 <= reset_delay3;
         reset_delay3 <= reset_delay2;
@@ -250,8 +246,8 @@ always @(posedge clock) begin
         has_pos <= pos_count > min_pos;
         has_neg <= neg_count > min_neg;
 
-        phase_out_neg <= ~phase_out + 1;
-        phase_offset_neg <= {{4{phase_out[15]}}, phase_out[15:4]};
+        // phase_out_neg <= ~phase_out + 1;
+        // phase_offset_neg <= {{4{phase_out[15]}}, phase_out[15:4]};
 
         prod_thres <= ( threshold_scale? ({2'b0, mag_sq_avg[31:2]} + {3'b0, mag_sq_avg[31:3]}):({1'b0, mag_sq_avg[31:1]} + {2'b0, mag_sq_avg[31:2]}) );
         
@@ -267,12 +263,12 @@ always @(posedge clock) begin
                     pos_count <= 0;
                     neg_count <= 0;
                     short_preamble_detected <= has_pos & has_neg;
-                    if (has_pos && has_neg && demod_is_ongoing==0) begin // only update and lock phase_offset to new value when short_preamble_detected and not start demod yet
-                        if(phase_out_neg[3] == 0)  // E.g. 131/16 = 8.1875 -> 8, -138/16 = -8.625 -> -9
-                            phase_offset <= {{4{phase_out_neg[15]}}, phase_out_neg[15:4]};
-                        else  // E.g. -131/16 = -8.1875 -> -8, 138/16 = 8.625 -> 9
-                            phase_offset <= ~phase_offset_neg + 1;
-                    end
+                    // if (has_pos && has_neg && demod_is_ongoing==0) begin // only update and lock phase_offset to new value when short_preamble_detected and not start demod yet
+                    //     if(phase_out_neg[3] == 0)  // E.g. 131/16 = 8.1875 -> 8, -138/16 = -8.625 -> -9
+                    //         phase_offset <= {{4{phase_out_neg[15]}}, phase_out_neg[15:4]};
+                    //     else  // E.g. -131/16 = -8.1875 -> -8, 138/16 = 8.625 -> 9
+                    //         phase_offset <= ~phase_offset_neg + 1;
+                    // end
                 end else begin
                     plateau_count <= plateau_count + 1;
                     short_preamble_detected <= 0;
