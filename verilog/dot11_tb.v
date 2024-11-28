@@ -29,6 +29,14 @@ wire [15:0] pkt_len;
 reg set_stb;
 reg [7:0] set_addr;
 reg [31:0] set_data;
+// registers to comtain metadata used for HE decoding
+reg [10:0] sta_id_to_decode;
+reg tb_disambiguity;
+reg [1:0] tb_pre_fec_padding_factor;
+reg [3:0] tb_he_mcs;
+reg [3:0] tb_ru_idx;
+reg [1:0] tb_ru_width_i;
+reg [1:0] tb_gi_he_ltf;
 
 wire demod_is_ongoing;
 wire receiver_rst;
@@ -113,7 +121,10 @@ integer equalizer_prod_scaled_fd;
 integer equalizer_mag_sq_fd;
 integer equalizer_out_fd;
 
-integer file_i, file_q, file_rssi_half_db, iq_sample_file, Fc_input_file, Fc_in, r;
+integer file_i, file_q, file_rssi_half_db, iq_sample_file;
+
+integer result, dummy;
+reg [100*8-1:0] string;
 
 assign signal_watchdog_enable = (state <= S_DECODE_SIGNAL);
 
@@ -150,9 +161,6 @@ always @(posedge clock) begin
   file_open_trigger = file_open_trigger + 1;
   if (file_open_trigger==1) begin
     iq_sample_file = $fopen(`SAMPLE_FILE, "r");
-    Fc_input_file = $fopen(`FC_IN_FILE, "r");
-    r = $fscanf(Fc_input_file, "%d\n", Fc_in);
-    Fc_in_MHz <= Fc_in;
     // bb_sample_fd = $fopen("./sample_in.txt", "w");
     // power_trigger_fd = $fopen("./power_trigger.txt", "w");
     short_preamble_detected_fd = $fopen("./short_preamble_detected.txt", "w");
@@ -247,10 +255,18 @@ always @(posedge clock) begin
     `endif
       // sample_in_strobe <= 1;
       //$fscanf(iq_sample_file, "%d %d %d", file_i, file_q, file_rssi_half_db);
-      iq_count_tmp = $fscanf(iq_sample_file, "%d %d", file_i, file_q);
-      if (iq_count_tmp != 2)
+      result = $fgets(string, iq_sample_file);
+      if (result == 0) begin
           run_out_of_iq_sample = 1;
-          
+      end
+      iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
+      if (iq_count_tmp != 2) begin
+          // Get decode info for TB
+          iq_count_tmp = $sscanf(string, "%d %d %d %d %d %d %d %d %d", sta_id_to_decode, tb_disambiguity, tb_pre_fec_padding_factor, tb_he_mcs, tb_ru_idx, tb_ru_width_i, tb_gi_he_ltf, Fc_in_MHz);
+          // Continue with sample already on this clock cycle
+          result = $fgets(string, iq_sample_file);
+          iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
+      end
       sample_in[15:0] <= file_q;
       sample_in[31:16]<= file_i;
       //rssi_half_db <= file_rssi_half_db;
