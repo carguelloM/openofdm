@@ -214,24 +214,32 @@ wire sync_short_phase_in_stb;
 wire [15:0] sync_short_phase_out;
 wire sync_short_phase_out_stb;
 
+wire [31:0] sync_long_phase_in_i;
+wire [31:0] sync_long_phase_in_q;
+wire sync_long_phase_in_stb;
+wire [15:0] sync_long_phase_out;
+wire sync_long_phase_out_stb;
+
 wire [31:0] eq_phase_in_i;
 wire [31:0] eq_phase_in_q;
 wire eq_phase_in_stb;
 wire [15:0] eq_phase_out;
 wire eq_phase_out_stb;
 
-wire[31:0] phase_in_i = state == S_SYNC_SHORT?
-    sync_short_phase_in_i: eq_phase_in_i;
-wire[31:0] phase_in_q = state == S_SYNC_SHORT?
-    sync_short_phase_in_q: eq_phase_in_q;
-wire phase_in_stb = state == S_SYNC_SHORT?
-    sync_short_phase_in_stb: eq_phase_in_stb;
+wire[31:0] phase_in_i = state == S_SYNC_LONG?
+    sync_long_phase_in_i: eq_phase_in_i;
+wire[31:0] phase_in_q = state == S_SYNC_LONG?
+    sync_long_phase_in_q: eq_phase_in_q;
+wire phase_in_stb = state == S_SYNC_LONG?
+    sync_long_phase_in_stb: eq_phase_in_stb;
 
 wire [15:0] phase_out;
 wire phase_out_stb;
 
 assign sync_short_phase_out = phase_out;
 assign sync_short_phase_out_stb = phase_out_stb;
+assign sync_long_phase_out_stb = phase_out_stb;
+assign sync_long_phase_out = phase_out;
 assign eq_phase_out = phase_out;
 assign eq_phase_out_stb = phase_out_stb;
 
@@ -368,8 +376,8 @@ sync_short sync_short_inst (
     .phase_out_stb(sync_short_phase_out_stb),
 
     .demod_is_ongoing(demod_is_ongoing),
-    .short_preamble_detected(short_preamble_detected),
-    .phase_offset(phase_offset)
+    .short_preamble_detected(short_preamble_detected)
+    //.phase_offset(phase_offset)
 );
 
 sync_long sync_long_inst (
@@ -379,9 +387,15 @@ sync_long sync_long_inst (
 
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
-    .phase_offset_input(phase_offset),
+     //.phase_offset_input(phase_offset),
+    .ltf_phase_offset(phase_offset),
     .short_gi(short_gi),
     .fft_win_shift(fft_win_shift),
+    .phase_in_i(sync_long_phase_in_i),
+    .phase_in_q(sync_long_phase_in_q),
+    .phase_in_stb(sync_long_phase_in_stb),
+    .phase_out(sync_long_phase_out),
+    .phase_out_stb(sync_long_phase_out_stb),
 
     .rot_addr(sync_long_rot_addr),
     .rot_data(sync_long_rot_data),

@@ -94,6 +94,9 @@ integer delay_prod_avg_mag_fd;
 // sync_long
 integer sum_fd;
 integer metric_fd;
+integer sync_long_prod_fd;
+integer sync_long_prod_avg_fd;
+integer sync_long_phase_out_fd;
 integer raw_fd;
 integer phase_correction_fd;
 integer next_phase_correction_fd;
@@ -180,6 +183,9 @@ always @(posedge clock) begin
     metric_fd = $fopen("./metric.txt", "w");
     raw_fd = $fopen("./raw.txt", "w");
     phase_correction_fd = $fopen("./phase_correction.txt", "w");
+    sync_long_prod_fd = $fopen("./sync_long_prod.txt","w");
+    sync_long_prod_avg_fd = $fopen("./sync_long_prod_avg.txt","w");
+    sync_long_phase_out_fd = $fopen("./sync_long_phase_out.txt","w");
     next_phase_correction_fd = $fopen("./next_phase_correction.txt", "w");
     fft_in_fd = $fopen("./fft_in.txt", "w");                   
     sync_long_out_fd = $fopen("./sync_long_out.txt", "w");
@@ -322,6 +328,9 @@ always @(posedge clock) begin
         // close long preamble detection output files
         $fclose(sum_fd);
         $fclose(metric_fd);
+        $fclose(sync_long_prod_fd);
+        $fclose(sync_long_prod_avg_fd);
+        $fclose(sync_long_phase_out_fd);
         $fclose(raw_fd);
         $fclose(phase_correction_fd);
         $fclose(next_phase_correction_fd);
@@ -371,7 +380,7 @@ always @(posedge clock) begin
       $fflush(short_preamble_detected_fd);
     end
     if(dot11_inst.long_preamble_detected) begin
-      $fwrite(long_preamble_detected_fd, "%d %d\n", iq_count, dot11_inst.sync_long_inst.addr1);
+      $fwrite(long_preamble_detected_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.addr1, dot11_inst.sync_long_inst.ltf_phase_offset);
       $fflush(long_preamble_detected_fd);
     end
     if(dot11_inst.fcs_out_strobe) begin
@@ -469,6 +478,18 @@ always @(posedge clock) begin
     if (dot11_inst.sync_long_inst.metric_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset) begin
       $fwrite(metric_fd, "%d %d\n", iq_count, dot11_inst.sync_long_inst.metric);
       $fflush(metric_fd);
+    end
+    if (dot11_inst.sync_long_inst.prod_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset) begin
+      $fwrite(sync_long_prod_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_long_inst.prod[63:32]), $signed(dot11_inst.sync_long_inst.prod[31:0]));
+      $fflush(sync_long_prod_fd);
+    end    
+    if (dot11_inst.sync_long_inst.phase_in_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset) begin
+      $fwrite(sync_long_prod_avg_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_long_inst.phase_in_i), $signed(dot11_inst.sync_long_inst.phase_in_q));
+      $fflush(sync_long_prod_avg_fd);
+    end
+    if (dot11_inst.sync_long_inst.phase_out_stb && dot11_inst.sync_long_inst.state > 1 && dot11_inst.state == S_SYNC_LONG && ~dot11_inst.sync_long_inst.reset) begin
+      $fwrite(sync_long_phase_out_fd, "%d %d\n", iq_count, $signed(dot11_inst.sync_long_inst.phase_out));
+      $fflush(sync_long_phase_out_fd);
     end
     if (dot11_inst.sync_long_inst.raw_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset && dot11_inst.sync_long_inst.state == dot11_inst.sync_long_inst.S_FFT) begin
       $fwrite(raw_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.raw_i, dot11_inst.sync_long_inst.raw_q);

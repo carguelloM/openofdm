@@ -13,9 +13,11 @@ module sync_long (
 
     input [31:0] sample_in,
     input sample_in_strobe,
-    `DEBUG_PREFIX input signed [15:0] phase_offset_input,
     input short_gi,
     input [3:0] fft_win_shift,
+
+    input [15:0] phase_out,
+    input phase_out_stb,
 
     output [`ROTATE_LUT_LEN_SHIFT-1:0] rot_addr,
     input [31:0] rot_data,
@@ -24,14 +26,19 @@ module sync_long (
     output metric_stb,
     output reg long_preamble_detected,
 
+    output [31:0] phase_in_i,
+    output [31:0] phase_in_q,
+    output phase_in_stb,
+
     output reg [31:0] sample_out,
     output reg sample_out_strobe,
     output reg [15:0] num_ofdm_symbol,
 
     `DEBUG_PREFIX input phase_offset_override_en,
     `DEBUG_PREFIX input signed [15:0] phase_offset_override_val,
-    output reg signed [15:0] phase_offset_taken,
-    output reg [1:0] state
+    output wire signed [15:0] phase_offset_taken,
+    output wire signed [15:0] ltf_phase_offset,
+    output reg [2:0] state
 );
 `include "common_params.v"
 
@@ -39,7 +46,17 @@ localparam IN_BUF_LEN_SHIFT = 8;
 
 localparam NUM_STS_TAIL = 32;
 localparam NUM_ADD_SP_TO_SKIP = 22 ; // skip some more samples to avoid consusion caused by CP
+localparam S_SKIPPING_TAIL = 0;
+localparam S_SKIPPING_CP = 1;
+localparam S_WAIT_FOR_FIRST_PEAK = 2;
+localparam S_WAIT_FOR_SECOND_PEAK = 3;
+localparam S_IDLE = 4;
+localparam S_FFT = 5;
 
+reg reset_delay1;
+reg reset_delay2;
+reg reset_delay3;
+reg reset_delay4;
 reg [15:0] in_offset;
 reg [IN_BUF_LEN_SHIFT-1:0] in_waddr;
 reg [IN_BUF_LEN_SHIFT-1:0] in_raddr;
@@ -67,9 +84,24 @@ reg signed [31:0] next_phase_correction;
 reg reset_delay ; // add reset signal for fft, somehow all kinds of event flag raises when feeding real rf signal, maybe reset will help
 wire fft_resetn ;
 
-`DEBUG_PREFIX wire signed [15:0] phase_offset;
+//`DEBUG_PREFIX wire signed [15:0] phase_offset;
+reg signed [15:0] ltf_phase_offset_int;
+assign ltf_phase_offset = (phase_offset_override_en?phase_offset_override_val:ltf_phase_offset_int);
+assign phase_offset_taken = ltf_phase_offset_int;
+wire [31:0] sample_delayed;
+wire sample_delayed_stb;
 
-assign phase_offset = (phase_offset_override_en?phase_offset_override_val:phase_offset_input);
+reg [31:0] sample_delayed_conj;
+reg sample_delayed_conj_stb;
+
+wire [63:0] prod;
+wire prod_stb;
+
+reg [15:0] phase_out_neg;
+reg [15:0] phase_offset_neg;
+
+wire sample_delay_enable;
+assign sample_delay_enable = (state == S_SKIPPING_CP || state == S_WAIT_FOR_FIRST_PEAK || state == S_WAIT_FOR_SECOND_PEAK)? 1'b1 : 1'b0 ;
 
 always @(posedge clock) begin
     reset_delay = reset ;
@@ -87,6 +119,46 @@ complex_to_mag #(.DATA_WIDTH(32)) sum_mag_inst (
 
     .mag(metric),
     .mag_stb(metric_stb)
+);
+
+fifo_sample_delay # (.DATA_WIDTH(32), .LOG2_FIFO_DEPTH(7)) sample_delayed_inst (
+    .clk(clock),
+    .rst(reset|reset_delay1|reset_delay2|reset_delay3|reset_delay4),
+    .delay_ctl(64),
+    .data_in(sample_in),
+    .data_in_valid(sample_in_strobe & sample_delay_enable),
+    .data_out(sample_delayed),
+    .data_out_valid(sample_delayed_stb)
+);
+
+complex_mult delay_prod_inst (
+    .clock(clock),
+    .enable(enable),
+    .reset(reset),
+
+    .a_i(sample_in[31:16]),
+    .a_q(sample_in[15:0]),
+    .b_i(sample_delayed_conj[31:16]),
+    .b_q(sample_delayed_conj[15:0]),
+    .input_strobe(sample_delayed_conj_stb),
+
+    .p_i(prod[63:32]),
+    .p_q(prod[31:0]),
+    .output_strobe(prod_stb)
+);
+
+mv_avg_dual_ch #(.DATA_WIDTH0(32), .DATA_WIDTH1(32), .LOG2_AVG_LEN(5)) freq_offset_inst (
+    .clk(clock),
+    .rstn(~(reset|reset_delay1|reset_delay2|reset_delay3|reset_delay4)),
+    // .rstn(~reset),
+
+    .data_in0(prod[63:32]),
+    .data_in1(prod[31:0]),
+    .data_in_valid(prod_stb),
+
+    .data_out0(phase_in_i),
+    .data_out1(phase_in_q),
+    .data_out_valid(phase_in_stb)
 );
 
 reg [31:0] metric_max1;
@@ -140,11 +212,6 @@ stage_mult stage_mult_inst (
     .sum({stage_sum_i, stage_sum_q}),
     .output_strobe(stage_sum_stb)
 );
-
-localparam S_SKIPPING = 0;
-localparam S_WAIT_FOR_FIRST_PEAK = 1;
-localparam S_IDLE = 2;
-localparam S_FFT = 3;
 
 reg fft_start;
 //wire fft_start_delayed;
@@ -255,8 +322,7 @@ xfft_v9 dft_inst (
   .event_data_out_channel_halt(event_data_out_channel_halt)  // output wire event_data_out_channel_halt
 );
 
-reg [15:0] num_sample;
-
+reg [7:0] num_sample;
 initial begin 
     phase_correction <= 0;
     next_phase_correction <= 0;
@@ -271,16 +337,42 @@ always @(posedge clock) begin
         end
         do_clear();
         state <= S_SKIPPING;
+        state <= S_SKIPPING_TAIL;
+        reset_delay1 <= reset;
+        reset_delay2 <= reset;
+        reset_delay3 <= reset;
+        reset_delay4 <= reset;
+        ltf_phase_offset_int <= 0;
+        phase_out_neg <= 0;
+        phase_offset_neg <= 0;
         fft_din_data_tlast <= 1'b0;
     end else if (enable) begin
-        if (sample_in_strobe && state != S_SKIPPING) begin
+        reset_delay4 <= reset_delay3;
+        reset_delay3 <= reset_delay2;
+        reset_delay2 <= reset_delay1;
+        reset_delay1 <= reset;
+        sample_delayed_conj_stb <= sample_delayed_stb;
+        sample_delayed_conj[31:16] <= sample_delayed[31:16];
+        sample_delayed_conj[15:0] <= ~sample_delayed[15:0]+1;   
+        phase_out_neg <= ~phase_out + 1;
+        phase_offset_neg <= {{6{phase_out[15]}}, phase_out[15:6]};
+        if (sample_in_strobe && state != S_SKIPPING_TAIL && state != S_SKIPPING_CP) begin
             in_waddr <= in_waddr + 1;
             num_input_produced <= num_input_produced + 1;
         end
         num_input_avail <= num_input_produced - num_input_consumed;
 
         case(state)
-            S_SKIPPING: begin
+            S_SKIPPING_TAIL: begin
+                // skip the tail of  short preamble
+                if (num_sample >= NUM_STS_TAIL) begin
+                    //num_sample <= 0;
+                    state <= S_SKIPPING_CP;
+                end else if (sample_in_strobe) begin
+                    num_sample <= num_sample + 1;
+                end
+            end
+            S_SKIPPING_CP: begin
                 // skip the tail of  short preamble
                 if (num_sample >= NUM_STS_TAIL + NUM_ADD_SP_TO_SKIP) begin
                     num_sample <= 0;
@@ -289,30 +381,44 @@ always @(posedge clock) begin
                     num_sample <= num_sample + 1;
                 end
             end
-
             S_WAIT_FOR_FIRST_PEAK: begin
                 do_mult();
 
-                if (metric_stb && (metric > metric_max1)) begin
+                if (metric_stb && (metric > metric_max1) && (num_sample <= 62)) begin
                     metric_max1 <= metric;
                     addr1 <= in_raddr - 1 -fft_win_shift;
                 end
 
-                if (num_sample >= 62) begin
-                    long_preamble_detected <= 1;
+                if (num_sample >= 63) begin
+                    // offset it by the length of cross correlation buffer
+                    // size
+                    //in_raddr <= addr1 - 32;
+                    //num_input_consumed <= addr1 - 32;
+                    in_offset <= 0;
+                    num_ofdm_symbol <= 0;
+                    state <= S_WAIT_FOR_SECOND_PEAK;
+                end 
+                if (metric_stb) begin
+                    num_sample <= num_sample + 1;
+                end
+
+            end
+
+            S_WAIT_FOR_SECOND_PEAK: begin
+                do_mult();
+
+                if (num_sample >= 64 + addr1 + 8 + fft_win_shift + 3 - NUM_ADD_SP_TO_SKIP && phase_out_stb == 1) begin // 64 + addr1
                     num_sample <= 0;
                     mult_strobe <= 0;
                     sum_stb <= 0;
-                    // offset it by the length of cross correlation buffer
-                    // size
-                    in_raddr <= addr1 - 32;
-                    num_input_consumed <= addr1 - 32;
-                    in_offset <= 0;
-                    num_ofdm_symbol <= 0;
-                    phase_correction <= 0;
-                    next_phase_correction <= phase_offset;
-                    phase_offset_taken <= phase_offset;
+                    if(phase_out_neg[5] == 0)  // E.g. 131/16 = 8.1875 -> 8, -138/16 = -8.625 -> -9
+                        ltf_phase_offset_int <= {{6{phase_out_neg[15]}}, phase_out_neg[15:6]};
+                    else  // E.g. -131/16 = -8.1875 -> -8, 138/16 = 8.625 -> 9
+                        ltf_phase_offset_int <= ~phase_offset_neg + 1;
                     state <= S_FFT;
+                    long_preamble_detected <= 1;
+                    in_raddr <= addr1 - 32; // + NUM_ADD_SP_TO_SKIP; 
+                    num_input_consumed <= addr1 - 32; //+ NUM_ADD_SP_TO_SKIP; 
                 end else if (metric_stb) begin
                     num_sample <= num_sample + 1;
                 end
@@ -325,6 +431,8 @@ always @(posedge clock) begin
                         $display("Long preamble detected");
                     `endif
                     long_preamble_detected <= 0;
+                    phase_correction <= 0;
+                    next_phase_correction <= ltf_phase_offset;
                 end
 
                 if (~fft_loading && num_input_avail > 88) begin
@@ -339,33 +447,33 @@ always @(posedge clock) begin
 
                 raw_stb <= fft_start | fft_loading;
                 if (raw_stb) begin
-                    if (phase_offset > 0) begin
+                    if (ltf_phase_offset > 0) begin
                         if (next_phase_correction > PI) begin
                             phase_correction <= next_phase_correction - DOUBLE_PI;
                             if(in_offset == 63 && num_ofdm_symbol > 0)
-                                next_phase_correction <= next_phase_correction - DOUBLE_PI + phase_offset + (short_gi ? phase_offset<<<3 : phase_offset<<<4);
+                                next_phase_correction <= next_phase_correction - DOUBLE_PI + ltf_phase_offset + (short_gi ? ltf_phase_offset<<<3 : ltf_phase_offset<<<4);
                             else
-                                next_phase_correction <= next_phase_correction - DOUBLE_PI + phase_offset;
+                                next_phase_correction <= next_phase_correction - DOUBLE_PI + ltf_phase_offset;
                         end else begin
                             phase_correction <= next_phase_correction;
                             if(in_offset == 63 && num_ofdm_symbol > 0)
-                                next_phase_correction <= next_phase_correction + phase_offset + (short_gi ? phase_offset<<<3 : phase_offset<<<4);
+                                next_phase_correction <= next_phase_correction + ltf_phase_offset + (short_gi ? ltf_phase_offset<<<3 : ltf_phase_offset<<<4);
                             else
-                                next_phase_correction <= next_phase_correction + phase_offset;
+                                next_phase_correction <= next_phase_correction + ltf_phase_offset;
                         end
                     end else begin
                         if (next_phase_correction < -PI) begin
                             phase_correction <= next_phase_correction + DOUBLE_PI;
                             if(in_offset == 63 && num_ofdm_symbol > 0)
-                                next_phase_correction <= next_phase_correction + DOUBLE_PI + phase_offset + (short_gi ? phase_offset<<<3 : phase_offset<<<4);
+                                next_phase_correction <= next_phase_correction + DOUBLE_PI + ltf_phase_offset + (short_gi ? ltf_phase_offset<<<3 : ltf_phase_offset<<<4);
                             else
-                                next_phase_correction <= next_phase_correction + DOUBLE_PI + phase_offset;
+                                next_phase_correction <= next_phase_correction + DOUBLE_PI + ltf_phase_offset;
                         end else begin
                             phase_correction <= next_phase_correction;
                             if(in_offset == 63 && num_ofdm_symbol > 0)
-                                next_phase_correction <= next_phase_correction + phase_offset + (short_gi ? phase_offset<<<3 : phase_offset<<<4);
+                                next_phase_correction <= next_phase_correction + ltf_phase_offset + (short_gi ? ltf_phase_offset<<<3 : ltf_phase_offset<<<4);
                             else
-                                next_phase_correction <= next_phase_correction + phase_offset;
+                                next_phase_correction <= next_phase_correction + ltf_phase_offset;
                         end
                     end
                 end
