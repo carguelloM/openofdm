@@ -21,9 +21,6 @@ puts "result_dir $result_dir"
 # Append the simulation iq file to ./verilog/openofdm_rx_pre_def.v
 set  fd  [open  "./verilog/openofdm_rx_pre_def.v"  a]
 puts $fd "`define SAMPLE_FILE \"$iq_filename\""
-set fc_filename [string range $iq_filename 0 end-4]
-append fc_filename "_Fc_input.txt"
-puts $fd "`define FC_IN_FILE \"$fc_filename\"" 
 close $fd
 
 # Sim
