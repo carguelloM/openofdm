@@ -500,7 +500,7 @@ always @(posedge clock) begin
       $fflush(next_phase_correction_fd);
     end
     if (dot11_inst.sync_long_inst.fft_in_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset && dot11_inst.demod_is_ongoing) begin//add demod_is_ongoing to prevent the garbage fft in after decoding is done overlap with the early sync_short of next packet
-      $fwrite(fft_in_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.fft_in_re, dot11_inst.sync_long_inst.fft_in_im);
+      $fwrite(fft_in_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.s_fft_in_re, dot11_inst.sync_long_inst.s_fft_in_im);
       $fflush(fft_in_fd);
     end
     if (dot11_inst.rotafft_inst.output_strobe) begin
@@ -623,7 +623,7 @@ signal_watchdog signal_watchdog_inst (
 
   // frequency offset monitor: too big fo estimated by sync_short means sth wrong
   .phase_offset(phase_offset_for_reg_read),
-  .short_preamble_detected(short_preamble_detected),
+  // .short_preamble_detected(short_preamble_detected),
   .phase_offset_abs_th(11),
 
   .event_selector(0),
