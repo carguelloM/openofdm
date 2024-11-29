@@ -35,7 +35,7 @@ module rot_after_fft
 
 
 localparam PW_OF_FFT_SIZE = 6;
-localparam SCALE = PW_OF_FFT_SIZE+27; // 27 is the width of fractional bits of divider
+localparam SCALE = 27; // 27 is the width of fractional bits of divider
 localparam Fs = 20000000; 
 localparam Fs_DIV_2PI = 6217; // round(Fs/(2*pi*2^ATAN_LUT_SCALE_SHIFT));
 localparam SC_IDX_FOR_UPDATE = 55 ;
@@ -45,7 +45,8 @@ reg is_ce ; // flag of channel estimation
 reg is_first_sym_after_ce; // flag for first ofdm symbol after cahnel estimation
 reg signed [16:0] Sxy;
 reg signed [16:0] Sxy_next;
-reg signed [10:0] Sxy_init;
+wire signed [16:0] Sxy_init;
+reg signed [16:0] fftwinshift_times_2PI;
 reg [5:0] sc_count ;
 reg [15:0] ofdm_sym_count ;
 reg signed [15:0] sym_phase ;
@@ -75,7 +76,8 @@ wire div_valid;
 wire signed [DATA_WIDTH-1:0] rot_out_i;
 wire signed [DATA_WIDTH-1:0] rot_out_q;
 wire signed [16:0] unscaled_phase;
-reg [2:0] power_of_gi; 
+reg [2:0] power_of_gi;
+assign Sxy_init = (fftwinshift_times_2PI >> 6) + fftwinshift_times_2PI[5];
 
 assign sc_count_spy = sc_count ;
 assign sym_phase_spy = sym_phase ;
@@ -83,23 +85,23 @@ assign sym_phase_spy = sym_phase ;
 // lut defined for scale 512
 always @(*) begin
     case (fft_win_shift)
-    4'h0 : Sxy_init <= 0;
-    4'h1 : Sxy_init <= 50;
-    4'h2 : Sxy_init <= 101;
-    4'h3 : Sxy_init <= 151;
-    4'h4 : Sxy_init <= 201;
-    4'h5 : Sxy_init <= 251;
-    4'h6 : Sxy_init <= 302;
-    4'h7 : Sxy_init <= 352;
-    4'h8 : Sxy_init <= 402;
-    4'h9 : Sxy_init <= 452;
-    4'hA : Sxy_init <= 503;
-    4'hB : Sxy_init <= 553;
-    4'hC : Sxy_init <= 603;
-    4'hD : Sxy_init <= 653;
-    4'hE : Sxy_init <= 704;
-    4'hF : Sxy_init <= 754;
-    default: Sxy_init <= 0;
+    4'h0 : fftwinshift_times_2PI <= 0;
+    4'h1 : fftwinshift_times_2PI <= 3216;
+    4'h2 : fftwinshift_times_2PI <= 6432;
+    4'h3 : fftwinshift_times_2PI <= 9648;
+    4'h4 : fftwinshift_times_2PI <= 12864;
+    4'h5 : fftwinshift_times_2PI <= 16080;
+    4'h6 : fftwinshift_times_2PI <= 19296;
+    4'h7 : fftwinshift_times_2PI <= 22512;
+    4'h8 : fftwinshift_times_2PI <= 25728;
+    4'h9 : fftwinshift_times_2PI <= 28944;
+    4'hA : fftwinshift_times_2PI <= 32160;
+    4'hB : fftwinshift_times_2PI <= 35376;
+    4'hC : fftwinshift_times_2PI <= 38592;
+    4'hD : fftwinshift_times_2PI <= 41808;
+    4'hE : fftwinshift_times_2PI <= 45024;
+    4'hF : fftwinshift_times_2PI <= 48240;
+    default: fftwinshift_times_2PI <= 0;
     endcase
 end 
 
@@ -204,9 +206,9 @@ always @(posedge clock) begin
                 scaled_phase_per_sym <= div1_times_fftsize+ div1_times_gi;
             end  
             if (sc_count == 58) 
-                scaled_phase <= is_ce? (Sxy_init << SCALE): (is_first_sym_after_ce? (scaled_phase + div1_times_dist_from_ce_init):(scaled_phase + scaled_phase_per_sym) );
+                scaled_phase <= is_ce? (fftwinshift_times_2PI << SCALE): (is_first_sym_after_ce? (scaled_phase + div1_times_dist_from_ce_init):(scaled_phase + scaled_phase_per_sym) );
             if (sc_count == 60)
-                Sxy_next <= phase_offset >=0 ? unscaled_phase:(unscaled_phase + |scaled_phase[SCALE-1:0]);                                            
+                Sxy_next <= is_ce? Sxy_init : (phase_offset >=0 ? unscaled_phase:(unscaled_phase + |scaled_phase[SCALE + PW_OF_FFT_SIZE - 1:0]));
         end 
         sym_phase <= next_sym_phase;
         sym_phase_valid <= input_strobe ;
@@ -221,7 +223,7 @@ assign div1_times_fftsize = div1 << PW_OF_FFT_SIZE;
 assign div1_times_gi = div1 << power_of_gi ;
 assign div1_times_32 = div1 << 5 ;
 assign div1_times_dist_from_ce_init = is_ht? div1_times_fftsize + div1_times_gi: div1_times_fftsize + div1_times_gi + div1_times_32;
-assign unscaled_phase = scaled_phase[49:SCALE] ;
+assign unscaled_phase = scaled_phase[49:SCALE + PW_OF_FFT_SIZE] ;
 div_for_rotafft inst(
     .aclk(clock), 
     .s_axis_divisor_tvalid(divisor_valid), 
