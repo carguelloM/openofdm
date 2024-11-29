@@ -193,7 +193,7 @@ module openofdm_rx #
 
     // frequency offset monitor: too big fo estimated by sync_short means sth wrong
     .phase_offset(phase_offset_for_reg_read),
-    .short_preamble_detected(short_preamble_detected),
+    .long_preamble_detected(long_preamble_detected),
     .phase_offset_abs_th(slv_reg18[16:0]),
 
     .event_selector(slv_reg17[2:0]),

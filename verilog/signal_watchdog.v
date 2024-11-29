@@ -38,7 +38,7 @@ module signal_watchdog
 		`DEBUG_PREFIX input wire equalizer_valid,
 
     `DEBUG_PREFIX input wire signed [15:0] phase_offset,
-    `DEBUG_PREFIX input wire short_preamble_detected,
+    `DEBUG_PREFIX input wire long_preamble_detected,
     `DEBUG_PREFIX input wire [16:0] phase_offset_abs_th,
 
     `DEBUG_PREFIX output receiver_rst
@@ -142,7 +142,7 @@ module signal_watchdog
       if (~rstn) begin
         sync_short_phase_offset_monitor_rst <= 0;
       end else begin
-        sync_short_phase_offset_monitor_rst <= (short_preamble_detected?(phase_offset_abs>phase_offset_abs_th):0);
+        sync_short_phase_offset_monitor_rst <= (long_preamble_detected?(phase_offset_abs>phase_offset_abs_th):0);
       end
     end
 
