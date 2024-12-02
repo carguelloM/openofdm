@@ -48,6 +48,7 @@ wire [4:0] state;
 wire signal_watchdog_enable;
 
 wire short_preamble_detected;
+wire long_preamble_detected;
 wire signed [15:0] phase_offset_for_reg_read;
 
 wire [31:0] equalizer;
@@ -623,7 +624,7 @@ signal_watchdog signal_watchdog_inst (
 
   // frequency offset monitor: too big fo estimated by sync_short means sth wrong
   .phase_offset(phase_offset_for_reg_read),
-  // .short_preamble_detected(short_preamble_detected),
+  .long_preamble_detected(long_preamble_detected),
   .phase_offset_abs_th(11),
 
   .event_selector(0),
@@ -668,6 +669,7 @@ dot11 dot11_inst (
   .phase_offset(phase_offset_for_reg_read),
 
   // sync long
+  .long_preamble_detected(long_preamble_detected),
   .phase_offset_override_en(0),
   .phase_offset_override_val(0),
 
