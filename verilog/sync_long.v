@@ -220,6 +220,8 @@ wire fft_in_stb;
 reg fft_loading;
 wire signed [15:0] fft_in_re;
 wire signed [15:0] fft_in_im;
+wire signed [15:0] fft_in_re_bitshift;
+wire signed [15:0] fft_in_im_bitshift;
 wire [22:0] fft_out_re;
 wire [22:0] fft_out_im;
 wire fft_ready;
@@ -273,7 +275,8 @@ rotate rotate_inst (
     .out_q(fft_in_im),
     .output_strobe(fft_in_stb)
 );
-
+assign fft_in_re_bitshift = {fft_in_re[15], fft_in_re[13:0],1'b0};
+assign fft_in_im_bitshift = {fft_in_im[15], fft_in_im[13:0],1'b0};
 delayT #(.DATA_WIDTH(1), .DELAY(10)) fft_delay_inst (
     .clock(clock),
     .reset(reset),
@@ -306,7 +309,7 @@ xfft_v9 dft_inst (
   .s_axis_config_tdata({7'b0, 1'b1}),                          // input wire [7 : 0] s_axis_config_tdata, use LSB to indicate it is forward transform, the rest should be ignored
   .s_axis_config_tvalid(1'b1),                                 // input wire s_axis_config_tvalid
   .s_axis_config_tready(s_axis_config_tready),                // output wire s_axis_config_tready
-  .s_axis_data_tdata({fft_in_im, fft_in_re}),                      // input wire [31 : 0] s_axis_data_tdata
+  .s_axis_data_tdata({fft_in_im_bitshift, fft_in_re_bitshift}),                      // input wire [31 : 0] s_axis_data_tdata
   .s_axis_data_tvalid(fft_in_stb),                    // input wire s_axis_data_tvalid
   .s_axis_data_tready(fft_ready),                    // output wire s_axis_data_tready
   .s_axis_data_tlast(fft_din_data_tlast_delayed),                      // input wire s_axis_data_tlast
