@@ -1,34 +1,34 @@
 module ofdm_decoder
 (
-    input clock,
-    input enable,
-    input reset,
+  input clock,
+  input enable,
+  input reset,
 
-    input [31:0] sample_in,
-    input sample_in_strobe,
-    input soft_decoding,
+  input [31:0] sample_in,
+  input sample_in_strobe,
+  input soft_decoding,
 
-    // decode instructions
-    input [7:0] rate,
-    input do_descramble,
-    input [19:0] num_bits_to_decode, //4bits + ht_len: num_bits_to_decode <= (22+(ht_len<<3));
+  // decode instructions
+  input [7:0] rate,
+  input do_descramble,
+  input [19:0] num_bits_to_decode, //4bits + ht_len: num_bits_to_decode <= (22+(ht_len<<3));
 
-    output [5:0] demod_out,
-    output [5:0] demod_soft_bits,
-    output [3:0] demod_soft_bits_pos,
-    output demod_out_strobe,
+  output [5:0] demod_out,
+  output [5:0] demod_soft_bits,
+  output [3:0] demod_soft_bits_pos,
+  output demod_out_strobe,
 
-    output [7:0] deinterleave_erase_out,
-    output deinterleave_erase_out_strobe,
+  output [7:0] deinterleave_erase_out,
+  output deinterleave_erase_out_strobe,
 
-    output conv_decoder_out,
-    output conv_decoder_out_stb,
+  output conv_decoder_out,
+  output conv_decoder_out_stb,
 
-    output descramble_out,
-    output descramble_out_strobe,
+  output descramble_out,
+  output descramble_out_strobe,
 
-    output [7:0] byte_out,
-    output byte_out_strobe
+  output [7:0] byte_out,
+  output byte_out_strobe
 );
 
 reg conv_in_stb, conv_in_stb_dly, do_descramble_dly;
@@ -63,35 +63,35 @@ reg [19:0] deinter_out_count; // bitwidth same as num_bits_to_decode
 assign deinterleave_erase_out = {erase,deinterleave_out};
 assign deinterleave_erase_out_strobe = deinterleave_out_strobe;
 demodulate demod_inst (
-    .clock(clock),
-    .reset(reset),
-    .enable(enable),
+  .clock(clock),
+  .reset(reset),
+  .enable(enable),
 
-    .rate(rate),
-    .cons_i(input_i),
-    .cons_q(input_q),
-    .input_strobe(sample_in_strobe),
-    .bits(demod_out),
-    .soft_bits(demod_soft_bits),
-    .soft_bits_pos(demod_soft_bits_pos),
-    .output_strobe(demod_out_strobe)
+  .rate(rate),
+  .cons_i(input_i),
+  .cons_q(input_q),
+  .input_strobe(sample_in_strobe),
+  .bits(demod_out),
+  .soft_bits(demod_soft_bits),
+  .soft_bits_pos(demod_soft_bits_pos),
+  .output_strobe(demod_out_strobe)
 );
 
 deinterleave deinterleave_inst (
-    .clock(clock),
-    .reset(reset),
-    .enable(enable),
+  .clock(clock),
+  .reset(reset),
+  .enable(enable),
 
-    .rate(rate),
-    .in_bits(demod_out),
-    .soft_in_bits(demod_soft_bits),
-    .soft_in_bits_pos(demod_soft_bits_pos),
-    .input_strobe(demod_out_strobe),
-    .soft_decoding(soft_decoding),
+  .rate(rate),
+  .in_bits(demod_out),
+  .soft_in_bits(demod_soft_bits),
+  .soft_in_bits_pos(demod_soft_bits_pos),
+  .input_strobe(demod_out_strobe),
+  .soft_decoding(soft_decoding),
 
-    .out_bits(deinterleave_out),
-    .output_strobe(deinterleave_out_strobe),
-    .erase(erase)
+  .out_bits(deinterleave_out),
+  .output_strobe(deinterleave_out_strobe),
+  .erase(erase)
 );
 /*
 viterbi_v7_0 viterbi_inst (
@@ -120,98 +120,98 @@ viterbi_v7_0 viterbi_inst (
 );
 
 descramble decramble_inst (
-    .clock(clock),
-    .enable(enable),
-    .reset(reset),
-    
-    .in_bit(conv_decoder_out),
-    .input_strobe(conv_decoder_out_stb),
+  .clock(clock),
+  .enable(enable),
+  .reset(reset),
+  
+  .in_bit(conv_decoder_out),
+  .input_strobe(conv_decoder_out_stb),
 
-    .out_bit(descramble_out),
-    .output_strobe(descramble_out_strobe)
+  .out_bit(descramble_out),
+  .output_strobe(descramble_out_strobe)
 );
 
 
 bits_to_bytes byte_inst (
-    .clock(clock),
-    .enable(enable),
-    .reset(reset),
+  .clock(clock),
+  .enable(enable),
+  .reset(reset),
 
-    .bit_in(bit_in),
-    .input_strobe(bit_in_stb),
+  .bit_in(bit_in),
+  .input_strobe(bit_in_stb),
 
-    .byte_out(byte_out),
-    .output_strobe(byte_out_strobe)
+  .byte_out(byte_out),
+  .output_strobe(byte_out_strobe)
 );
 
 always @(posedge clock) begin
-    if (reset) begin
-        conv_in_stb <= 0;
-        conv_in0 <= 0;
-        conv_in1 <= 0;
-        conv_erase <= 0;
+  if (reset) begin
+    conv_in_stb <= 0;
+    conv_in0 <= 0;
+    conv_in1 <= 0;
+    conv_erase <= 0;
 
-        bit_in <= 0;
-        // skip the first 9 bits of descramble out (service bits)
-        skip_bit <= 9;
-        bit_in_stb <= 0;
+    bit_in <= 0;
+    // skip the first 9 bits of descramble out (service bits)
+    skip_bit <= 9;
+    bit_in_stb <= 0;
 
-        //flush <= 0;
-        deinter_out_count <= 0;
-    end else if (enable) begin
-        if (deinterleave_out_strobe) begin
-            deinter_out_count <= deinter_out_count + 1;
-        end //else begin
-            // wait for finishing deinterleaving current symbol
-            // only do flush for non-DATA bits, such as SIG and HT-SIG, which
-            // are not scrambled
-            //if (~do_descramble && deinter_out_count >= num_bits_to_decode) begin
-            //if (deinter_out_count >= num_bits_to_decode) begin // careful! deinter_out_count is only correct from 6M ~ 48M! under 54M, it should be 2*216, but actual value is 288!
-                //flush <= 1;
-            //end
-        //end
-        //if (!flush) begin
-        if (!(deinter_out_count >= num_bits_to_decode)) begin
-            conv_in_stb <= deinterleave_out_strobe;
-            conv_in0 <= deinterleave_out[2:0];
-            conv_in1 <= deinterleave_out[5:3];
-            conv_erase <= erase;
-        end else begin
-            conv_in_stb <= 1;
-            conv_in0 <= 3'b011;
-            conv_in1 <= 3'b011;
-            conv_erase <= 0;
-        end
-
-        if (deinter_out_count > 0) begin
-            if (~do_descramble_dly) begin
-                bit_in <= conv_decoder_out;
-                bit_in_stb <= conv_decoder_out_stb;
-            end else begin
-                bit_in <= descramble_out;
-                if (descramble_out_strobe) begin
-                    if (skip_bit > 0 ) begin
-                        skip_bit <= skip_bit - 1;
-                        bit_in_stb <= 0;
-                    end else begin
-                        bit_in_stb <= 1;
-                    end
-                end else begin
-                    bit_in_stb <= 0;
-                end
-            end
-        end
+    //flush <= 0;
+    deinter_out_count <= 0;
+  end else if (enable) begin
+    if (deinterleave_out_strobe) begin
+      deinter_out_count <= deinter_out_count + 1;
+    end //else begin
+      // wait for finishing deinterleaving current symbol
+      // only do flush for non-DATA bits, such as SIG and HT-SIG, which
+      // are not scrambled
+      //if (~do_descramble && deinter_out_count >= num_bits_to_decode) begin
+      //if (deinter_out_count >= num_bits_to_decode) begin // careful! deinter_out_count is only correct from 6M ~ 48M! under 54M, it should be 2*216, but actual value is 288!
+          //flush <= 1;
+      //end
+    //end
+    //if (!flush) begin
+    if (!(deinter_out_count >= num_bits_to_decode)) begin
+      conv_in_stb <= deinterleave_out_strobe;
+      conv_in0 <= deinterleave_out[2:0];
+      conv_in1 <= deinterleave_out[5:3];
+      conv_erase <= erase;
+    end else begin
+      conv_in_stb <= 1;
+      conv_in0 <= 3'b011;
+      conv_in1 <= 3'b011;
+      conv_erase <= 0;
     end
+
+    if (deinter_out_count > 0) begin
+      if (~do_descramble_dly) begin
+        bit_in <= conv_decoder_out;
+        bit_in_stb <= conv_decoder_out_stb;
+      end else begin
+        bit_in <= descramble_out;
+        if (descramble_out_strobe) begin
+          if (skip_bit > 0 ) begin
+            skip_bit <= skip_bit - 1;
+            bit_in_stb <= 0;
+          end else begin
+            bit_in_stb <= 1;
+          end
+        end else begin
+          bit_in_stb <= 0;
+        end
+      end
+    end
+  end
 end
 
 // process used to delay things
 // TODO: this is only a temp solution, as tready only rise one clock after ce goes high, delay statically by one clock, in future should take into account tready
 always @(posedge clock) begin
-    conv_in1_dly <= conv_in1;
-    conv_in0_dly <= conv_in0;
-    conv_erase_dly <= conv_erase;
-    conv_in_stb_dly <= conv_in_stb ;
-    do_descramble_dly <= do_descramble;
+  conv_in1_dly <= conv_in1;
+  conv_in0_dly <= conv_in0;
+  conv_erase_dly <= conv_erase;
+  conv_in_stb_dly <= conv_in_stb ;
+  do_descramble_dly <= do_descramble;
 end
 
 endmodule
