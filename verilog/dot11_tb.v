@@ -269,7 +269,7 @@ always @(posedge clock) begin
       iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
       if (iq_count_tmp != 2) begin
           // Get decode info for TB
-          iq_count_tmp = $sscanf(string, "%d %d %d %d %d %d %d %d %d", sta_id_to_decode, tb_disambiguity, tb_pre_fec_padding_factor, tb_he_mcs, tb_ru_idx, tb_ru_width_i, tb_gi_he_ltf, Fc_in_MHz);
+          iq_count_tmp = $sscanf(string, "%d %d %d %d %d %d %d %d", sta_id_to_decode, tb_disambiguity, tb_pre_fec_padding_factor, tb_he_mcs, tb_ru_idx, tb_ru_width_i, tb_gi_he_ltf, Fc_in_MHz);
           // Continue with sample already on this clock cycle
           result = $fgets(string, iq_sample_file);
           iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
