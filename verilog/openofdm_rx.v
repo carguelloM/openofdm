@@ -106,9 +106,9 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg14; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg15; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg16; */  
-	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17;
-	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18;
-	wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19;
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg17;
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg18;
+  wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg19;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg20; // read openofdm rx core internal state
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg21; 
   /*
@@ -120,12 +120,12 @@ module openofdm_rx #
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg27; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg28; 
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg29; 
-*/	
+*/  
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg30;
   wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg31; 
 
   wire slv_reg_wren_signal;
-	wire [4:0] axi_awaddr_core;
+  wire [4:0] axi_awaddr_core;
 
   `DEBUG_PREFIX wire [(RSSI_HALF_DB_WIDTH-2):0] rx_sensitivity_th_lock;
   `DEBUG_PREFIX wire [(RSSI_HALF_DB_WIDTH-1):0] rx_sensitivity_th;
