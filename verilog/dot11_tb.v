@@ -260,28 +260,28 @@ always @(posedge clock) begin
     `elsif CLK_SPEED_400M
     if (clk_count == 19) begin // for 200M; 400/20 = 20
     `endif
-      // sample_in_strobe <= 1;
+  //            sample_in_strobe <= 1;
       //$fscanf(iq_sample_file, "%d %d %d", file_i, file_q, file_rssi_half_db);
       result = $fgets(string, iq_sample_file);
       if (result == 0) begin
-          run_out_of_iq_sample = 1;
+        run_out_of_iq_sample = 1;
       end
       iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
       if (iq_count_tmp != 2) begin
-          // Get decode info for TB
-          iq_count_tmp = $sscanf(string, "%d %d %d %d %d %d %d %d", sta_id_to_decode, tb_disambiguity, tb_pre_fec_padding_factor, tb_he_mcs, tb_ru_idx, tb_ru_width_i, tb_gi_he_ltf, Fc_in_MHz);
-          // Continue with sample already on this clock cycle
-          result = $fgets(string, iq_sample_file);
-          iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
+        // Get decode info for TB
+        iq_count_tmp = $sscanf(string, "%d %d %d %d %d %d %d %d", sta_id_to_decode, tb_disambiguity, tb_pre_fec_padding_factor, tb_he_mcs, tb_ru_idx, tb_ru_width_i, tb_gi_he_ltf, Fc_in_MHz);
+        // Continue with sample already on this clock cycle
+        result = $fgets(string, iq_sample_file);
+        iq_count_tmp = $sscanf(string, "%d %d %d", file_i, file_q, dummy);
       end
       sample_in[15:0] <= file_q;
-      sample_in[31:16]<= file_i;
+      sample_in[31:16]<= file_i;             
       //rssi_half_db <= file_rssi_half_db;
       rssi_half_db <= 0;
       iq_count <= iq_count + 1;
       clk_count <= 0;
     end else begin
-      // sample_in_strobe <= 0;
+//            sample_in_strobe <= 0;
       clk_count <= clk_count + 1;
     end
     
@@ -303,13 +303,13 @@ always @(posedge clock) begin
       // $fflush(power_trigger_fd);
 
       if ((iq_count % 100) == 0) begin
-  //                $display("%d", iq_count);
+//       $display("%d", iq_count);
       end
 
       if (run_out_of_iq_sample) begin
-          end_dl_count = end_dl_count+1;
+        end_dl_count = end_dl_count+1;
       end
-        
+      
       if(end_dl_count == 300 ) begin
         $fclose(iq_sample_file);
 
@@ -436,37 +436,37 @@ always @(posedge clock) begin
 
     // sync_short 
     if (dot11_inst.sync_short_inst.mag_sq_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-      //if (dot11_inst.sync_short_inst.mag_sq_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+    //if (dot11_inst.sync_short_inst.mag_sq_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
       $fwrite(mag_sq_fd, "%d %d\n", iq_count, dot11_inst.sync_short_inst.mag_sq);
       $fflush(mag_sq_fd);
     end
     if (dot11_inst.sync_short_inst.mag_sq_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-      //if (dot11_inst.sync_short_inst.mag_sq_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+    //if (dot11_inst.sync_short_inst.mag_sq_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
       $fwrite(mag_sq_avg_fd, "%d %d\n", iq_count, dot11_inst.sync_short_inst.mag_sq_avg);
       $fflush(mag_sq_avg_fd);
     end
     if (dot11_inst.sync_short_inst.prod_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-      //if (dot11_inst.sync_short_inst.prod_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+    //if (dot11_inst.sync_short_inst.prod_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
       $fwrite(prod_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.prod[63:32]), $signed(dot11_inst.sync_short_inst.prod[31:0]));
       $fflush(prod_fd);
     end
     if (dot11_inst.sync_short_inst.prod_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-      //if (dot11_inst.sync_short_inst.prod_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+    //if (dot11_inst.sync_short_inst.prod_avg_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
       $fwrite(prod_avg_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.prod_avg[63:32]), $signed(dot11_inst.sync_short_inst.prod_avg[31:0]));
       $fflush(prod_avg_fd);
     end
-    // if (dot11_inst.sync_short_inst.phase_in_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-    //   //if (dot11_inst.sync_short_inst.phase_in_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
-    //   $fwrite(phase_in_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.phase_in_i), $signed(dot11_inst.sync_short_inst.phase_in_q));
-    //   $fflush(phase_in_fd);
-    // end
-    // if (dot11_inst.sync_short_inst.phase_out_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-    //   //if (dot11_inst.sync_short_inst.phase_out_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
-    //   $fwrite(phase_out_fd, "%d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.phase_out));
-    //   $fflush(phase_out_fd);
-    // end
+//        if (dot11_inst.sync_short_inst.phase_in_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
+//        //if (dot11_inst.sync_short_inst.phase_in_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+//            $fwrite(phase_in_fd, "%d %d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.phase_in_i), $signed(dot11_inst.sync_short_inst.phase_in_q));
+//            $fflush(phase_in_fd);
+//        end
+//        if (dot11_inst.sync_short_inst.phase_out_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
+//        //if (dot11_inst.sync_short_inst.phase_out_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+//            $fwrite(phase_out_fd, "%d %d\n", iq_count, $signed(dot11_inst.sync_short_inst.phase_out));
+//            $fflush(phase_out_fd);
+//        end
     if (dot11_inst.sync_short_inst.delay_prod_avg_mag_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset && dot11_inst.state == S_SYNC_SHORT) begin
-      //if (dot11_inst.sync_short_inst.delay_prod_avg_mag_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
+    //if (dot11_inst.sync_short_inst.delay_prod_avg_mag_stb && dot11_inst.sync_short_inst.enable && ~dot11_inst.sync_short_inst.reset) begin
       $fwrite(delay_prod_avg_mag_fd, "%d %d\n", iq_count, dot11_inst.sync_short_inst.delay_prod_avg_mag);
       $fflush(delay_prod_avg_mag_fd);
     end
@@ -569,8 +569,8 @@ always @(posedge clock) begin
       $fflush(rot_in_fd);
     end
     if (dot11_inst.equalizer_inst.rot_out_stb && dot11_inst.equalizer_inst.state==dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION && dot11_inst.equalizer_inst.enable && ~dot11_inst.equalizer_inst.reset && dot11_inst.demod_is_ongoing) begin
-      // when enable is 0, it locked equalizer all internal variables till the next reset/enable, some large delayed signal, such as rot out, logged with some garbage
-      // limite the log to dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION state
+  // when enable is 0, it locked equalizer all internal variables till the next reset/enable, some large delayed signal, such as rot out, logged with some garbage
+  // limite the log to dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION state
       $fwrite(rot_out_fd, "%d %d %d\n", iq_count, dot11_inst.equalizer_inst.rot_i, dot11_inst.equalizer_inst.rot_q);
       $fflush(rot_out_fd);
     end
@@ -653,7 +653,7 @@ dot11 dot11_inst (
   .sample_in(sample_in),
   .sample_in_strobe(sample_in_strobe),
   .soft_decoding(1'b1),
-  .force_ht_smoothing(1'b0),
+  .force_ht_smoothing(1'b1),
   .disable_all_smoothing(1'b0),
   .fft_win_shift(4'd4),
 
@@ -674,7 +674,6 @@ dot11 dot11_inst (
   .phase_offset_override_val(0),
 
   .equalizer_out(equalizer),
-
   .equalizer_out_strobe(equalizer_valid)
 );
 
