@@ -12,11 +12,12 @@
 
 module openofdm_rx #
 (
-  parameter integer IQ_DATA_WIDTH  = 16,
-  parameter integer RSSI_HALF_DB_WIDTH = 11,
+  parameter integer IQ_DATA_WIDTH          = 16,
+  parameter integer RSSI_HALF_DB_WIDTH     = 11,
 
-  parameter integer C_S00_AXI_DATA_WIDTH  = 32,
-  parameter integer C_S00_AXI_ADDR_WIDTH  = 7,
+  parameter integer C_S00_AXI_DATA_WIDTH   = 32,
+  parameter integer C_S00_AXI_ADDR_WIDTH   = 7,
+
   parameter integer WATCHDOG_COUNTER_WIDTH = 22
 )
 (
@@ -25,14 +26,14 @@ module openofdm_rx #
   input wire [(RSSI_HALF_DB_WIDTH-2):0] para_rx_sensitivity_th,
 
   // intf to dot11
-  //input  wire openofdm_core_rst,
+  // input  wire openofdm_core_rst,
   input  wire signed [(RSSI_HALF_DB_WIDTH-1):0] rssi_half_db,
   input  wire [(2*IQ_DATA_WIDTH-1):0] sample_in,
   input  wire sample_in_strobe,
   `DEBUG_PREFIX input wire [15:0] Fc_in_MHz,
 
   output wire demod_is_ongoing, // this needs to be corrected further to indicate actual RF on going regardless the latency
-  //    output wire pkt_ht,
+  // output wire pkt_ht,
   output wire short_preamble_detected,
   output wire long_preamble_detected,
   output wire pkt_header_valid,
@@ -43,10 +44,10 @@ module openofdm_rx #
   output ht_aggr,
   output ht_aggr_last,
   output wire ht_sgi,
-  //    output wire [15:0] pkt_len_total, // for interface to byte_to_word.v in rx_intf.v
+  // output wire [15:0] pkt_len_total, // for interface to byte_to_word.v in rx_intf.v
   output wire byte_out_strobe,
   output wire [7:0] byte_out,
-  //    output wire [15:0] byte_count_total, // for interface to byte_to_word.v in rx_intf.v
+  // output wire [15:0] byte_count_total, // for interface to byte_to_word.v in rx_intf.v
   output wire [15:0] byte_count,
   output wire fcs_out_strobe,
   output wire fcs_ok,
@@ -269,6 +270,7 @@ module openofdm_rx #
     .sync_long_out_strobe(),
     .phase_offset_override_en(slv_reg19[31]),
     .phase_offset_override_val(slv_reg19[15:0]),
+    .phase_offset_taken(phase_offset_taken_internal),
     .sync_long_state(),
     .fft_win_shift(slv_reg5[3:0]),
 
