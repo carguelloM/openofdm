@@ -260,8 +260,8 @@ always @(posedge clock) begin
     `elsif CLK_SPEED_400M
     if (clk_count == 19) begin // for 200M; 400/20 = 20
     `endif
-  //            sample_in_strobe <= 1;
-      //$fscanf(iq_sample_file, "%d %d %d", file_i, file_q, file_rssi_half_db);
+      // sample_in_strobe <= 1;
+      // $fscanf(iq_sample_file, "%d %d %d", file_i, file_q, file_rssi_half_db);
       result = $fgets(string, iq_sample_file);
       if (result == 0) begin
         run_out_of_iq_sample = 1;
@@ -276,12 +276,12 @@ always @(posedge clock) begin
       end
       sample_in[15:0] <= file_q;
       sample_in[31:16]<= file_i;             
-      //rssi_half_db <= file_rssi_half_db;
+      // rssi_half_db <= file_rssi_half_db;
       rssi_half_db <= 0;
       iq_count <= iq_count + 1;
       clk_count <= 0;
     end else begin
-//            sample_in_strobe <= 0;
+      // sample_in_strobe <= 0;
       clk_count <= clk_count + 1;
     end
     
@@ -303,7 +303,7 @@ always @(posedge clock) begin
       // $fflush(power_trigger_fd);
 
       if ((iq_count % 100) == 0) begin
-//       $display("%d", iq_count);
+        // $display("%d", iq_count);
       end
 
       if (run_out_of_iq_sample) begin
@@ -569,8 +569,8 @@ always @(posedge clock) begin
       $fflush(rot_in_fd);
     end
     if (dot11_inst.equalizer_inst.rot_out_stb && dot11_inst.equalizer_inst.state==dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION && dot11_inst.equalizer_inst.enable && ~dot11_inst.equalizer_inst.reset && dot11_inst.demod_is_ongoing) begin
-  // when enable is 0, it locked equalizer all internal variables till the next reset/enable, some large delayed signal, such as rot out, logged with some garbage
-  // limite the log to dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION state
+      // when enable is 0, it locked equalizer all internal variables till the next reset/enable, some large delayed signal, such as rot out, logged with some garbage
+      // limite the log to dot11_inst.equalizer_inst.S_ALL_SC_PE_CORRECTION state
       $fwrite(rot_out_fd, "%d %d %d\n", iq_count, dot11_inst.equalizer_inst.rot_i, dot11_inst.equalizer_inst.rot_q);
       $fflush(rot_out_fd);
     end
@@ -593,28 +593,28 @@ end
 signal_watchdog signal_watchdog_inst (
   .clk(clock),
   .rstn(~reset),
-  //    .enable(~demod_is_ongoing),
+  // .enable(~demod_is_ongoing),
   .enable(signal_watchdog_enable),
 
   .i_data(sample_in[31:16]),
   .q_data(sample_in[15:0]),
   .iq_valid(sample_in_strobe),
 
+  .power_trigger(1),
+
   .signal_len(pkt_len),
   .sig_valid(sig_valid),
 
-  .power_trigger(1),
-
   // // configuration for disabling
-  //    .min_signal_len_th(0),
-  //    .max_signal_len_th(16'hFFFF),
-  //    .dc_running_sum_th(65),
+  // .min_signal_len_th(0),
+  // .max_signal_len_th(16'hFFFF),
+  // .dc_running_sum_th(65),
 
   // // configuration for normal
   .min_signal_len_th(14),
   .max_signal_len_th(1700),
   .dc_running_sum_th(64),
-
+  
   // equalizer monitor: the normalized constellation shoud not be too small (like only has 1 or 2 bits effective)
   .equalizer_monitor_enable(1),
   .small_eq_out_counter_th(48),
@@ -631,7 +631,7 @@ signal_watchdog signal_watchdog_inst (
   .event_counter(),
   .slv_reg_wren_signal(0),
   .axi_awaddr_core(0),
-
+  
   .receiver_rst(receiver_rst)
 );
 
