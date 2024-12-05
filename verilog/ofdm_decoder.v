@@ -95,14 +95,14 @@ deinterleave deinterleave_inst (
 );
 /*
 viterbi_v7_0 viterbi_inst (
-    .clk(clock),
-    .ce(vit_ce),
-    .sclr(vit_clr),
-    .data_in0(conv_in0),
-    .data_in1(conv_in1),
-    .erase(conv_erase),
-    .rdy(vit_rdy),
-    .data_out(conv_decoder_out)
+  .clk(clock),
+  .ce(vit_ce),
+  .sclr(vit_clr),
+  .data_in0(conv_in0),
+  .data_in1(conv_in1),
+  .erase(conv_erase),
+  .rdy(vit_rdy),
+  .data_out(conv_decoder_out)
 );
 */
 //reg [4:0] idle_wire_5bit ;
@@ -130,7 +130,6 @@ descramble decramble_inst (
   .out_bit(descramble_out),
   .output_strobe(descramble_out_strobe)
 );
-
 
 bits_to_bytes byte_inst (
   .clock(clock),
