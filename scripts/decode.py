@@ -7,7 +7,7 @@ import collections
 import itertools
 import array
 import math
-from cStringIO import StringIO
+from io import StringIO
 
 import commpy.channelcoding.convcode as cc
 
@@ -120,7 +120,7 @@ PHASE_SCALE = 256
 
 
 # 802.11a/g
-SUBCARRIERS = range(-26, 0) + range(1, 27)
+SUBCARRIERS = list(range(-26, 0)) + list(range(1, 27))
 FFT_MAPPING = dict((c, c if c > 0 else 64 + c) for c in SUBCARRIERS)
 LTS_REF = dict(
     zip(SUBCARRIERS,
@@ -147,7 +147,7 @@ RATE_BITS = {
 }
 
 # 802.11n
-HT_SUBCARRIERS = range(-28, 0) + range(1, 29)
+HT_SUBCARRIERS = list(range(-28, 0)) + list(range(1, 29))
 HT_FFT_MAPPING = dict((c, c if c > 0 else 64 + c) for c in HT_SUBCARRIERS)
 
 # append 1 for negative sub carriers, -1 for positive sub carriers
@@ -184,15 +184,7 @@ class ChannelEstimator(object):
 
         # print '[RAW LTS] (%s)' % (self.samples[160+32:160+32+4])
         for i in range(0):
-            print '[%d] (%d, %d) -> (%d, %d) phase: %f (diff: %d)' %\
-                (i,
-                 int(self.samples[192+i].real),
-                 int(self.samples[192+i].imag),
-                 int(self.lts_samples[i].real),
-                 int(self.lts_samples[i].imag),
-                 cmath.phase(self.lts_samples[i]),
-                 int((cmath.phase(self.lts_samples[i])-cmath.phase(samples[192+i]))*PHASE_SCALE),
-                 )
+            print('[', i, '] (', int(self.samples[192+i].real), int(self.samples[192+i].imag), ') -> (', int(self.lts_samples[i].real), int(self.lts_samples[i].imag), ') phase: ', cmath.phase(self.lts_samples[i]), ' (diff: ', int((cmath.phase(self.lts_samples[i])-cmath.phase(samples[192+i]))*PHASE_SCALE), ')')
         self.gain = dict((c, (lts1[c]+lts2[c])/2*LTS_REF[c])
                          for c in self.subcarriers)
         self.idx = 0
@@ -224,7 +216,7 @@ class ChannelEstimator(object):
             prod = symbol[c].conjugate()*self.gain[c]
             prod_sum += prod
         beta = cmath.phase(prod_sum)
-        print "[PILOT OFFSET] %f (%d)" % (beta, int(beta*PHASE_SCALE))
+        print('[PILOT OFFSET] ', beta, ' (', int(beta*PHASE_SCALE), ')')
         carriers = []
         for c in self.subcarriers:
             if c in PILOT_SUBCARRIES:
@@ -247,7 +239,7 @@ class ChannelEstimator(object):
 
         ht_offset = cmath.phase(sum([ht_sts[i].conjugate()*ht_sts[i+16]
                                      for i in range(len(ht_sts)-16)]))/16
-        print '[HT OFFSET] %f (%d)' % (ht_offset, int(ht_offset*PHASE_SCALE))
+        print('[HT OFFSET] ', ht_offset, ' (', int(ht_offset*PHASE_SCALE), ')')
         ht_offset = 0
         self.data_samples = [c*cmath.exp(complex(0, -n*ht_offset))
                              for n, c in enumerate(self.data_samples[self.idx:])]
@@ -270,7 +262,7 @@ class ChannelEstimator(object):
 
         coarse_offset = cmath.phase(sum([sts[i]*sts[i+16].conjugate()
                                          for i in range(len(sts)-16)]))/16
-        print '[COARSE OFFSET] %f (%d)' % (coarse_offset, int(coarse_offset*PHASE_SCALE))
+        print('[COARSE OFFSET] ', coarse_offset, ' (', int(coarse_offset*PHASE_SCALE), ')')
         # coarse_offset = 0
 
         # coarse correction
@@ -279,14 +271,14 @@ class ChannelEstimator(object):
 
         fine_offset = cmath.phase(sum([lts[i]*lts[i+64].conjugate()
                                        for i in range(len(lts)-64)]))/64
-        print '[FINE OFFSET] %f (%d)' % (fine_offset, int(fine_offset*PHASE_SCALE))
+        print('[FINE OFFSET] ', fine_offset, ' (', int(fine_offset*PHASE_SCALE), ')')
         fine_offset = 0
 
         self.lts_samples = [c*cmath.exp(complex(0, n*fine_offset))
                for n, c in enumerate(lts)]
 
         self.freq_offset = coarse_offset + fine_offset
-        print '[FREQ OFFSET] %f (%d)' % (self.freq_offset, int(self.freq_offset*PHASE_SCALE))
+        print('[FREQ OFFSET] ', self.freq_offset, (int(self.freq_offset*PHASE_SCALE)))
 
         self.data_samples = [c*cmath.exp(complex(0, n*self.freq_offset))
                              for n, c in enumerate(self.samples[320:], start=128)]
@@ -423,7 +415,7 @@ class Decoder(object):
             if skip*4 < size:
                 self.fh.seek(skip*4)
             else:
-                print "[WARN] try to seek beyond end of file %d/%d" % (skip*4, size)
+                print('[WARN] try to seek beyond end of file ', skip*4, '/', size)
             self.power_thres = 200
             self.window = window
             self.count = skip
@@ -439,7 +431,7 @@ class Decoder(object):
             if not trigger and any([abs(c) > self.power_thres for c in chunk]):
                 trigger = True
                 samples = []
-                print "Power trigger at %d" % (self.count)
+                print('Power trigger at ', self.count)
                 glbl_index = self.count
 
             self.count += self.window
@@ -452,8 +444,7 @@ class Decoder(object):
                 if start is None:
                     trigger = False
                 else:
-                    print "Decoding packet starting from sample %d" %\
-                        (glbl_index + start)
+                    print('Decoding packet starting from sample ', glbl_index + start)
                     return (glbl_index, ) +\
                         self.decode(samples[start:], *args, **kwargs)
 
@@ -478,6 +469,7 @@ class Decoder(object):
         return demod.demodulate(carriers)
 
     def deinterleave(self, in_bits, rate=6, mcs=0, ht=False, verbose=False):
+        # verbose=True
         if not ht:
             n_bpsc, n_cbps, n_dbps = RATE_PARAMETERS[rate]
             n_col = 16
@@ -486,34 +478,41 @@ class Decoder(object):
             n_bpsc, n_cbps, n_dbps = HT_MCS_PARAMETERS[mcs]
             n_col = 13
             n_row = 4 * n_bpsc
-        s = max(n_bpsc/2, 1)
+        s = max(int(n_bpsc/2), 1)
 
         first_perm = dict()
         for j in range(0, n_cbps):
-            first_perm[j] = (s * (j/s)) + ((j + n_col*j/n_cbps) % s)
+            first_perm[j] = (s * int(j/s)) + ((j + int(n_col*j/n_cbps)) % s)
 
         second_perm = dict()
         for i in range(0, n_cbps):
-            second_perm[i] = n_col*i - (n_cbps-1)*(i/n_row)
+            second_perm[i] = n_col*i - (n_cbps-1)*int(i/n_row)
 
         if verbose:
-            print "Bit rate: %f Mb/s" % (rate)
-            print "Bits per sub carrier: %d" % (n_bpsc)
-            print "Coded bits per symbol: %d" % (n_cbps)
-            print "Data bits per symbol %d" % (n_dbps)
-            print "S = %d" % (s)
-            print "====== Overall permutation ========="
+            print('Bit rate: ', rate, ' Mb/s')
+            print('Bits per sub carrier: ', n_bpsc)
+            print('Coded bits per symbol: ', n_cbps)
+            print('Data bits per symbol ', n_dbps)
+            print('S = ', s)
+            print('====== Overall permutation =========')
             for j in range(0, n_cbps):
-                print '%d -> %d -> %d' % (j, first_perm[j], second_perm[first_perm[j]])
+                print(j, ' -> ', first_perm[j], ' -> ', second_perm[first_perm[j]])
 
         if in_bits is None:
             idx_map = []
             for k in range(n_cbps):
+                # print(k)
+                # print('')
+                # print(first_perm[k])
+                # print('')
+                # print(second_perm)
                 idx_map.append((second_perm[first_perm[k]], k))
+            # print(idx_map)
+            # print(sorted(idx_map))
             return sorted(idx_map)
 
         if verbose:
-            print '%d bits, %f samples' % (len(in_bits), float(len(in_bits))/n_cbps)
+            print(len(in_bits),' bits, ', float(len(in_bits))/n_cbps, ' samples')
 
         out_bits = [0]*len(in_bits)
         for n in range(len(in_bits)/n_cbps):
@@ -530,7 +529,7 @@ class Decoder(object):
             ht, rate, mcs = signal.ht, signal.rate, signal.mcs
 
         if (not ht and rate in [9, 18, 36, 54]) or (ht and mcs in [2, 4, 6]):
-            print '[PUNCTURE] 3/4'
+            print('[PUNCTURE] 3/4')
             # 3/4
             new_bits = []
             for i in range(0, len(bits), 12):
@@ -543,7 +542,7 @@ class Decoder(object):
                 new_bits.extend(bits[i+11:i+12])
             bits = new_bits
         elif (not ht and rate in [48]) or (ht and mcs in [5]):
-            print '[PUNCTURE] 2/3'
+            print('[PUNCTURE] 2/3')
             # 2/3
             new_bits = []
             for i in range(0, len(bits), 9):
@@ -555,7 +554,7 @@ class Decoder(object):
                 new_bits.append(2)
             bits = new_bits
         elif ht and mcs in [7]:
-            print '[PUNCTURE] 5/6'
+            print('[PUNCTURE] 5/6')
             # 5/6
             new_bits = []
             for i in range(0, len(bits), 6):
@@ -566,10 +565,10 @@ class Decoder(object):
                 new_bits.append(bits[i+5])
             bits = new_bits
         else:
-            print '[NO PUNCTURE]'
+            print('[NO PUNCTURE]')
 
         extended_bits = np.array([0]*2 + bits + [0]*12)
-        trellis = cc.Trellis(np.array([7]), np.array([[0133, 0171]]))
+        trellis = cc.Trellis(np.array([7]), np.array([[0o133, 0o171]]))
         return list(cc.viterbi_decode(extended_bits, trellis, tb_depth=35))[:-7]
 
     def descramble(self, bits):
@@ -592,50 +591,50 @@ class Decoder(object):
 
     def check_signal(self, signal):
         if signal.rate_bits not in RATE_BITS:
-            print '[SIGNAL] invalid rate: %s' % (signal.rate_bits)
+            print('[SIGNAL] invalid rate: ', signal.rate_bits)
             return False
 
         if signal.rsvd != '0':
-            print '[SIGNAL] wrong rsvd'
+            print('[SIGNAL] wrong rsvd')
             return False
 
         if not signal.parity_ok:
-            print '[SIGNAL] wrong parity'
+            print('[SIGNAL] wrong parity')
             return False
 
         if not all([b == '0' for b in signal.tail_bits]):
-            print '[SIGNAL] wrong tail: %s' % (signal.tail_bits)
+            print('[SIGNAL] wrong tail: ', signal.tail_bits)
             return False
 
         return True
 
     def check_ht_signal(self, signal):
         if signal.mcs > 7:
-            print '[HT SIGNAL] mcs not supported: %d' % (signal.mcs)
+            print('[HT SIGNAL] mcs not supported: ', signal.mcs)
             return False
 
         if signal.cbw != '0':
-            print '[HT SIGNAL] CBW not supported'
+            print('[HT SIGNAL] CBW not supported')
             return False
 
         if signal.rsvd != '1':
-            print '[HT SIGNAL] wrong rsvd'
+            print('[HT SIGNAL] wrong rsvd')
             return False
 
         if signal.stbc != '00':
-            print '[HT SIGNAL] stbc not supported: %s' % (signal.stbc)
+            print('[HT SIGNAL] stbc not supported: ', signal.stbc)
             return False
 
         if signal.fec != '0':
-            print '[HT SIGNAL] FEC not supported'
+            print('[HT SIGNAL] FEC not supported')
             return False
 
         if signal.num_ext_stream != '00':
-            print '[HT SIGNAL] EXT spatial stream not supported: %s' % (signal.num_ext_stream)
+            print('[HT SIGNAL] EXT spatial stream not supported: ', signal.num_ext_stream)
             return False
 
         if not all([b == '0' for b in signal.tail_bits]):
-            print '[HT SIGNAL] wrong tail: %s' % (signal.tail_bits)
+            print('[HT SIGNAL] wrong tail: ', signal.tail_bits)
             return False
 
         return True
@@ -649,7 +648,7 @@ class Decoder(object):
         raw_bits = self.deinterleave(carrier_bits)
         bits = self.viterbi_decode(raw_bits)
         signal = Signal(bits)
-        print "[SIGNAL] %s" % (signal.__dict__)
+        print('[SIGNAL] ', signal.__dict__,)
 
         if not self.check_signal(signal):
             return
@@ -675,7 +674,7 @@ class Decoder(object):
 
             ht_signal = HTSignal(signal_bits)
             if ht_signal.crc_ok:
-                print "[HT SIGNAL] %s" % (ht_signal.__dict__)
+                print('[HT SIGNAL] ', ht_signal.__dict__,)
                 if not self.check_ht_signal(ht_signal):
                     return
                 signal = ht_signal
@@ -690,7 +689,7 @@ class Decoder(object):
             num_symbol = int(math.ceil(float((16+signal.length*8.0+6))/
                                        RATE_PARAMETERS[signal.rate][2]))
 
-        print "%d DATA OFDM symbols to decode" % (num_symbol)
+        print(num_symbol, ' DATA OFDM symbols to decode')
 
         if signal.rate == 6 and not signal.ht:
             num_symbol -= 2
@@ -709,7 +708,7 @@ class Decoder(object):
         descramble_out = self.descramble(conv_out)
 
         if not all([b == 0 for b in descramble_out[:16]]):
-            print '[SERVICE] not all bits are 0'
+            print('[SERVICE] not all bits are 0')
 
         # skip the SERVICE bits
         data_bits = descramble_out[16:]
@@ -720,8 +719,7 @@ class Decoder(object):
         assert len(data_bytes) == num_bytes
 
         for i in range(0, num_bytes, 16):
-            print '[%3d] %s' %\
-                (i, ' '.join([format(data_bytes[j], '02x')
+            print('[', i, '] ', ' '.join([format(data_bytes[j], '02x')
                               for j in range(i, min(i+16, num_bytes))]))
 
         fh = StringIO(''.join([chr(b) for b in data_bytes]))

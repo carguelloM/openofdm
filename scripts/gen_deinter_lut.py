@@ -112,10 +112,10 @@ def do_rate(rate=6, mcs=0, ht=False):
     i = 0
     puncture = 0
     while i < len(seq):
-        addra = seq[i]/n_bpsc
+        addra = int(seq[i]/n_bpsc)
         bita = seq[i]%n_bpsc
         if i+1 < len(seq):
-            addrb = seq[i+1]/n_bpsc
+            addrb = int(seq[i+1]/n_bpsc)
             bitb = seq[i+1]%n_bpsc
         else:
             addrb = 0
@@ -198,28 +198,29 @@ def main():
         else:
             idx = int(RATE_BITS[rate], 2)
         header[idx] = offset
-        print '[rate=%d, mcs=%d] -> %d' % (rate, mcs, offset)
+        print('[rate=', rate, 'mcs=', mcs, '] -> ', offset, idx)
 
         data = do_rate(rate=rate, mcs=mcs, ht=ht)
         offset += len(data)
         lut.extend(data)
 
     total = int(2**math.ceil(math.log(offset, 2)))
-    print 'Total row: %d (round up to %d)' % (offset, total)
+    print('Total row: ', offset, '(round up to ', total, ')')
 
     lut.extend([0]*(total-offset))
 
+    print(header)
     with open(args.out, 'w') as f:
         for l in header + lut:
             f.write('{0:022b}\n'.format(l))
-    print "MIL file saved as %s" % (args.out)
+    print('MIL file saved as', args.out)
 
     with open(coe_out, 'w') as f:
         f.write('memory_initialization_radix=2;\n')
         f.write('memory_initialization_vector=\n')
         f.write(',\n'.join(['{0:022b}'.format(l) for l in header+lut]))
         f.write(';')
-    print "COE file saved as %s" % (coe_out)
+    print('COE file saved as ', coe_out)
 
 if __name__ == '__main__':
     main()

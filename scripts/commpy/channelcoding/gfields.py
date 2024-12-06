@@ -5,7 +5,7 @@
 
 """ Galois Fields """
 
-from fractions import gcd
+from math import gcd
 from numpy import array, zeros, arange, convolve, ndarray, concatenate
 from itertools import *
 from commpy.utilities import dec2bitarray, bitarray2dec
