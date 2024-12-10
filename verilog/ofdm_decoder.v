@@ -4,6 +4,10 @@ module ofdm_decoder
   input enable,
   input reset,
 
+  input       reset_dot11,
+  input [4:0] state,
+  input [4:0] old_state,
+
   input [31:0] sample_in,
   input sample_in_strobe,
   input soft_decoding,
@@ -13,9 +17,13 @@ module ofdm_decoder
   input do_descramble,
   input [19:0] num_bits_to_decode, //4bits + ht_len: num_bits_to_decode <= (22+(ht_len<<3));
 
+  input [31:0] csi,
+  input csi_valid,
+  input [31:0] noiseVar,
+  input noiseVar_valid,
+
   output [5:0] demod_out,
-  output [5:0] demod_soft_bits,
-  output [3:0] demod_soft_bits_pos,
+  output [17:0] demod_soft_bits,
   output demod_out_strobe,
 
   output [7:0] deinterleave_erase_out,
@@ -31,7 +39,10 @@ module ofdm_decoder
   output byte_out_strobe
 );
 
+`include "common_params.v"
+
 reg conv_in_stb, conv_in_stb_dly, do_descramble_dly;
+wire conv_in_stb_auto_zero_while_not_enable;
 reg [2:0] conv_in0, conv_in0_dly;
 reg [2:0] conv_in1, conv_in1_dly;
 reg [1:0] conv_erase, conv_erase_dly;
@@ -39,10 +50,28 @@ reg [1:0] conv_erase, conv_erase_dly;
 wire [15:0] input_i = sample_in[31:16];
 wire [15:0] input_q = sample_in[15:0];
 
+wire [(31-7):0] noiseVar_new; //25bit. Matlab: noise_var_new = floor(noiseVar/128);
+wire        csi_square_valid;
+wire [31:0] csi_square;
+wire [31:0] csi_square_raw;
+wire [33:0] csi_square_scaled;
+
+wire [33:0] csi_square_over_noise_var;
+wire        csi_square_over_noise_var_valid;
+wire [35:0] csi_square_over_noise_var_full;
+
+wire [33:0] csi_square_over_noise_var_for_write;
+wire [33:0] csi_square_over_noise_var_for_llr;
+wire        csi_square_over_noise_var_write_enable;
+reg  [5:0]  csi_square_over_noise_var_write_addr;
+wire [7:0]  csi_square_over_noise_var_read_addr;
+
+wire        csi_square_over_noise_var_write_reset;
+
 // wire vit_ce = reset | (enable & conv_in_stb) | conv_in_stb_dly; //Seems new viter decoder IP core does not need this complicated CE signal
 wire vit_ce = 1'b1 ; //Need to be 1 to avoid the viterbi decoder freezing issue on adrv9364z7020 (demod_is_ongoing always high. dot11 stuck at state 3)
 wire vit_clr = reset;
-reg vit_clr_dly;
+// reg vit_clr_dly;
 wire vit_rdy;
 
 wire [5:0] deinterleave_out;
@@ -51,17 +80,71 @@ wire [1:0] erase;
 
 wire m_axis_data_tvalid ;
 
-// assign conv_decoder_out_stb = vit_ce & vit_rdy;
-assign conv_decoder_out_stb = m_axis_data_tvalid; // vit_rdy was used as data valid in the old version of the core, which is no longer the case 
 reg [3:0] skip_bit;
 reg bit_in;
 reg bit_in_stb;
+wire bit_in_stb_auto_zero_while_not_enable;
 
 reg [19:0] deinter_out_count; // bitwidth same as num_bits_to_decode
 //reg flush;
 
+assign noiseVar_new = (noiseVar[31:7] == 0? 1 : noiseVar[31:7]); //25bit. Matlab: noise_var_new = floor(noiseVar/128);
+// noise_var_new = floor(noiseVar/128);
+// if noise_var_new == 0
+//   noise_var_new = 1;
+// end
+
+assign csi_square = {csi_square_raw[30:0], 1'd0}; // csi_square = 2*floor(real(new_lts .* conj(new_lts))/2); % Follow the way CSI^2 is calculated on FPGA.
+assign csi_square_scaled = {csi_square, 2'd0}; // 34bit. csi_square.*4 in matlab use_llr_soft_bit == 5 in bit_true_ofdm_decoder.m
+assign csi_square_over_noise_var = csi_square_over_noise_var_full[35:2]; //34bit. remove the 2 fractional bits from full 36bit. now it is fix(csi_square.*4./noise_var_new);
+
+assign csi_square_over_noise_var_write_reset = ( (state == S_DECODE_SIGNAL && old_state == S_SYNC_LONG) || (old_state == S_CHECK_HT_SIG && state > S_CHECK_HT_SIG) );
+
+// assign conv_decoder_out_stb = vit_ce & vit_rdy;
+assign conv_decoder_out_stb = m_axis_data_tvalid; // vit_rdy was used as data valid in the old version of the core, which is no longer the case 
 assign deinterleave_erase_out = {erase,deinterleave_out};
 assign deinterleave_erase_out_strobe = deinterleave_out_strobe;
+
+assign csi_square_over_noise_var_for_write = csi_square_over_noise_var;
+assign csi_square_over_noise_var_write_enable = csi_square_over_noise_var_valid;
+
+assign conv_in_stb_auto_zero_while_not_enable = (enable? conv_in_stb : 0);
+assign bit_in_stb_auto_zero_while_not_enable = (enable? bit_in_stb : 0);
+
+// calculate csi_square/noiseVar and store for further steps
+// partially from Colvin's csi_calc.v
+complex_to_mag_sq csi_square_inst (
+  .clock(clock),
+  .enable(1),
+  .reset(reset_dot11|csi_square_over_noise_var_write_reset),
+
+  .i(csi[31:16]),
+  .q(csi[15:0]),
+  .input_strobe(csi_valid), 
+  .mag_sq(csi_square_raw),
+  .mag_sq_strobe(csi_square_valid)
+);
+div_gen_csi_over_nova div_gen_csi_over_nova_inst (
+  .aclk(clock),
+  .s_axis_divisor_tvalid(csi_square_valid),
+  .s_axis_divisor_tdata(noiseVar_new), //25bit
+  .s_axis_dividend_tvalid(csi_square_valid),
+  .s_axis_dividend_tdata(csi_square_scaled), //34bit
+  .m_axis_dout_tvalid(csi_square_over_noise_var_valid),
+  .m_axis_dout_tdata(csi_square_over_noise_var_full) //36bit
+);
+dpram #(.DATA_WIDTH(34), .ADDRESS_WIDTH(6)) lts_inst (
+  .clock(clock),
+  .enable_a(1),
+  .write_enable(csi_square_over_noise_var_write_enable),
+  .write_address(csi_square_over_noise_var_write_addr),
+  .write_data(csi_square_over_noise_var_for_write),
+  .read_data_a(),
+  .enable_b(1),
+  .read_address(csi_square_over_noise_var_read_addr[5:0]),
+  .read_data(csi_square_over_noise_var_for_llr)
+);
+
 demodulate demod_inst (
   .clock(clock),
   .reset(reset),
@@ -71,9 +154,12 @@ demodulate demod_inst (
   .cons_i(input_i),
   .cons_q(input_q),
   .input_strobe(sample_in_strobe),
-  .bits(demod_out),
+
+  .csi_square_over_noise_var_read_addr(csi_square_over_noise_var_read_addr),
+  .csi_square_over_noise_var_for_llr(csi_square_over_noise_var_for_llr),
+  
+  .bits_output(demod_out),
   .soft_bits(demod_soft_bits),
-  .soft_bits_pos(demod_soft_bits_pos),
   .output_strobe(demod_out_strobe)
 );
 
@@ -85,7 +171,6 @@ deinterleave deinterleave_inst (
   .rate(rate),
   .in_bits(demod_out),
   .soft_in_bits(demod_soft_bits),
-  .soft_in_bits_pos(demod_soft_bits_pos),
   .input_strobe(demod_out_strobe),
   .soft_decoding(soft_decoding),
 
@@ -137,11 +222,20 @@ bits_to_bytes byte_inst (
   .reset(reset),
 
   .bit_in(bit_in),
-  .input_strobe(bit_in_stb),
+  .input_strobe(bit_in_stb_auto_zero_while_not_enable),
 
   .byte_out(byte_out),
   .output_strobe(byte_out_strobe)
 );
+
+// store csi_square_over_noise_var to dpram
+always @(posedge clock) begin
+  if (reset_dot11|csi_square_over_noise_var_write_reset) begin
+    csi_square_over_noise_var_write_addr <= 0;
+  end else begin
+    csi_square_over_noise_var_write_addr <= (csi_square_over_noise_var_write_enable ? (csi_square_over_noise_var_write_addr+1) : csi_square_over_noise_var_write_addr);
+  end
+end
 
 always @(posedge clock) begin
   if (reset) begin
@@ -209,7 +303,7 @@ always @(posedge clock) begin
   conv_in1_dly <= conv_in1;
   conv_in0_dly <= conv_in0;
   conv_erase_dly <= conv_erase;
-  conv_in_stb_dly <= conv_in_stb ;
+  conv_in_stb_dly <= conv_in_stb_auto_zero_while_not_enable;
   do_descramble_dly <= do_descramble;
 end
 

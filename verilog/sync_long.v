@@ -25,7 +25,7 @@ module sync_long (
     output [31:0] metric,
     output metric_stb,
     output reg long_preamble_detected,
-
+    
     output [31:0] phase_in_i,
     output [31:0] phase_in_q,
     output phase_in_stb,
@@ -151,7 +151,7 @@ mv_avg_dual_ch #(.DATA_WIDTH0(32), .DATA_WIDTH1(32), .LOG2_AVG_LEN(5)) freq_offs
     .clk(clock),
     .rstn(~(reset|reset_delay1|reset_delay2|reset_delay3|reset_delay4)),
     // .rstn(~reset),
-
+    
     .data_in0(prod[63:32]),
     .data_in1(prod[31:0]),
     .data_in_valid(prod_stb),
@@ -275,6 +275,7 @@ rotate rotate_inst (
     .out_q(fft_in_im),
     .output_strobe(fft_in_stb)
 );
+
 assign fft_in_re_bitshift = {fft_in_re[15], fft_in_re[13:0],1'b0};
 assign fft_in_im_bitshift = {fft_in_im[15], fft_in_im[13:0],1'b0};
 delayT #(.DATA_WIDTH(1), .DELAY(10)) fft_delay_inst (
@@ -339,7 +340,6 @@ always @(posedge clock) begin
             cross_corr_buf[j] <= 0;
         end
         do_clear();
-        state <= S_SKIPPING;
         state <= S_SKIPPING_TAIL;
         reset_delay1 <= reset;
         reset_delay2 <= reset;
@@ -406,7 +406,7 @@ always @(posedge clock) begin
                 end
 
             end
-
+            
             S_WAIT_FOR_SECOND_PEAK: begin
                 do_mult();
 
@@ -426,7 +426,7 @@ always @(posedge clock) begin
                     num_sample <= num_sample + 1;
                 end
 
-            end
+            end 
 
             S_FFT: begin
                 if (long_preamble_detected) begin

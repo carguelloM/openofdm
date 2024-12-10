@@ -9,8 +9,7 @@ module deinterleave
 
     input [7:0] rate,
     input [5:0] in_bits,
-    input [5:0] soft_in_bits,
-    input [3:0] soft_in_bits_pos,
+    input [17:0] soft_in_bits,
     input input_strobe,
     input soft_decoding,
 
@@ -42,10 +41,8 @@ wire [2:0] lut_bitb = lut_out_delayed[4:2];
 
 wire [5:0] bit_outa;
 wire [5:0] bit_outb;
-wire [5:0] soft_bit_outa;
-wire [5:0] soft_bit_outb;
-wire [3:0] soft_bit_outa_pos;
-wire [3:0] soft_bit_outb_pos;
+wire [17:0] soft_bit_outa;
+wire [17:0] soft_bit_outb;
 
 // Soft and hard decoding
 wire [4:0] MOD_TYPE = {rate[7], rate[3:0]};
@@ -62,42 +59,38 @@ always @* begin
         // Soft decoding
         if(soft_decoding && (BPSK || QPSK || QAM_16 || QAM_64)) begin
             if(BPSK || lut_bita < N_BPSC_DIV_2) begin
-                if(lut_bita[1:0] == soft_bit_outa_pos[1:0]) begin
+                if(lut_bita[1:0] == 0) begin
                     out_bits[2:0] = soft_bit_outa[2:0];
-                end else begin
-                    if(bit_outa[lut_bita] == 1'b1)
-                        out_bits[2:0] = 3'b111;
-                    else
-                        out_bits[2:0] = 3'b011;
+                end else if (lut_bita[1:0] == 1) begin
+                    out_bits[2:0] = soft_bit_outa[5:3];
+                end else if (lut_bita[1:0] == 2) begin
+                    out_bits[2:0] = soft_bit_outa[8:6];
                 end
             end else begin
-                if(lut_bita == ({1'b0,soft_bit_outa_pos[3:2]} + N_BPSC_DIV_2)) begin
-                    out_bits[2:0] = soft_bit_outa[5:3];
-                end else begin
-                    if(bit_outa[lut_bita] == 1'b1)
-                        out_bits[2:0] = 3'b111;
-                    else
-                        out_bits[2:0] = 3'b011;
+                if(lut_bita == (0 + N_BPSC_DIV_2)) begin
+                    out_bits[2:0] = soft_bit_outa[11:9];
+                end else if(lut_bita == (1 + N_BPSC_DIV_2)) begin
+                    out_bits[2:0] = soft_bit_outa[14:12];
+                end else if(lut_bita == (2 + N_BPSC_DIV_2)) begin
+                    out_bits[2:0] = soft_bit_outa[17:15];
                 end
             end
 
             if(BPSK || lut_bitb < N_BPSC_DIV_2) begin
-                if(lut_bitb[1:0] == soft_bit_outb_pos[1:0]) begin
+                if(lut_bitb[1:0] == 0) begin
                     out_bits[5:3] = soft_bit_outb[2:0];
-                end else begin
-                    if(bit_outb[lut_bitb] == 1'b1)
-                        out_bits[5:3] = 3'b111;
-                    else
-                        out_bits[5:3] = 3'b011;
+                end else if(lut_bitb[1:0] == 1) begin
+                    out_bits[5:3] = soft_bit_outb[5:3];
+                end else if(lut_bitb[1:0] == 2) begin
+                    out_bits[5:3] = soft_bit_outb[8:6];
                 end
             end else begin
-                if(lut_bitb == ({1'b0,soft_bit_outb_pos[3:2]} + N_BPSC_DIV_2)) begin
-                    out_bits[5:3] = soft_bit_outb[5:3];
-                end else begin
-                    if(bit_outb[lut_bitb] == 1'b1)
-                        out_bits[5:3] = 3'b111;
-                    else
-                        out_bits[5:3] = 3'b011;
+                if(lut_bitb == (0 + N_BPSC_DIV_2)) begin
+                    out_bits[5:3] = soft_bit_outb[11:9];
+                end else if(lut_bitb == (1 + N_BPSC_DIV_2)) begin
+                    out_bits[5:3] = soft_bit_outb[14:12];
+                end else if(lut_bitb == (2 + N_BPSC_DIV_2)) begin
+                    out_bits[5:3] = soft_bit_outb[17:15];
                 end
             end
 
@@ -130,16 +123,16 @@ wire lut_done = lut_out[0];
 reg ram_delay;
 reg ht_delayed;
 
-dpram #(.DATA_WIDTH(16), .ADDRESS_WIDTH(6)) ram_inst (
+dpram #(.DATA_WIDTH(24), .ADDRESS_WIDTH(6)) ram_inst (
     .clock(clock),
     .enable_a(1),
     .write_enable(input_strobe),
     .write_address(addra),
-    .write_data({in_bits, soft_in_bits, soft_in_bits_pos}),
-    .read_data_a({bit_outa,soft_bit_outa,soft_bit_outa_pos}),
+    .write_data({in_bits, soft_in_bits}),
+    .read_data_a({bit_outa,soft_bit_outa}),
     .enable_b(1),
     .read_address(addrb),
-    .read_data({bit_outb,soft_bit_outb,soft_bit_outb_pos})
+    .read_data({bit_outb,soft_bit_outb})
 );
 
 deinter_lut lut_inst (

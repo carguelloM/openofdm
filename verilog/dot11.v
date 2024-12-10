@@ -116,8 +116,7 @@ module dot11 (
 
     // decoding pipeline
     output [5:0] demod_out,
-    output [5:0] demod_soft_bits,
-    output [3:0] demod_soft_bits_pos,
+    output [17:0] demod_soft_bits,
     output demod_out_strobe,
 
     output [7:0] deinterleave_erase_out,
@@ -208,11 +207,11 @@ rot_lut rot_lut_inst (
 ////////////////////////////////////////////////////////////////////////////////
 // Shared phase module for sync_short and equalizer
 ////////////////////////////////////////////////////////////////////////////////
-// wire [31:0] sync_short_phase_in_i;
-// wire [31:0] sync_short_phase_in_q;
-// wire sync_short_phase_in_stb;
-// wire [15:0] sync_short_phase_out;
-// wire sync_short_phase_out_stb;
+//wire [31:0] sync_short_phase_in_i;
+//wire [31:0] sync_short_phase_in_q;
+//wire sync_short_phase_in_stb;
+//wire [15:0] sync_short_phase_out;
+//wire sync_short_phase_out_stb;
 
 wire [31:0] sync_long_phase_in_i;
 wire [31:0] sync_long_phase_in_q;
@@ -357,6 +356,16 @@ assign byte_reversed[7] = byte_out[0];
 
 reg [15:0] sync_long_out_count;
 
+// signals for aLLR demapper
+wire s_noiseEst_valid;
+wire s_csi_data_sbc_valid;
+wire signed [31:0] s_noiseEst;
+wire s_vit_bit_demap, s_vit_bit_demap_stb;
+wire s_byte_out_aLLRdemap_stb;
+wire [7:0] s_byte_out_aLLRdemap;
+wire [7:0] s_byte_out_legacy;
+wire s_byte_out_legacy_stb;
+
 sync_short sync_short_inst (
     .clock(clock),
     .reset(reset | sync_short_reset),
@@ -368,12 +377,12 @@ sync_short sync_short_inst (
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
 
-    // .phase_in_i(sync_short_phase_in_i),
-    // .phase_in_q(sync_short_phase_in_q),
-    // .phase_in_stb(sync_short_phase_in_stb),
+//    .phase_in_i(sync_short_phase_in_i),
+//    .phase_in_q(sync_short_phase_in_q),
+//    .phase_in_stb(sync_short_phase_in_stb),
 
-    // .phase_out(sync_short_phase_out),
-    // .phase_out_stb(sync_short_phase_out_stb),
+//    .phase_out(sync_short_phase_out),
+//    .phase_out_stb(sync_short_phase_out_stb),
 
     .demod_is_ongoing(demod_is_ongoing),
     .short_preamble_detected(short_preamble_detected)
@@ -384,10 +393,10 @@ sync_long sync_long_inst (
     .clock(clock),
     .reset(reset | sync_long_reset),
     .enable(enable & sync_long_enable),
-
+    
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
-     //.phase_offset_input(phase_offset),
+    //.phase_offset_input(phase_offset),
     .ltf_phase_offset(phase_offset),
     .short_gi(short_gi),
     .fft_win_shift(fft_win_shift),
@@ -461,9 +470,11 @@ equalizer equalizer_inst (
     .state(equalizer_state),
 
     .csi(csi),
-    .csi_valid(csi_valid)
+    .csi_valid(csi_valid),
+    .o_csi_data_sbc_valid(s_csi_data_sbc_valid),
+    .o_noiseEst_stb(s_noiseEst_valid),
+    .o_noiseEst(s_noiseEst)
 );
-
 
 delayT #(.DATA_WIDTH(33), .DELAY(17)) eq_delay_inst (
     .clock(clock),
@@ -473,11 +484,14 @@ delayT #(.DATA_WIDTH(33), .DELAY(17)) eq_delay_inst (
     .data_out({eq_out_stb_delayed, eq_out_i_delayed, eq_out_q_delayed})
 );
 
-
 ofdm_decoder ofdm_decoder_inst (
     .clock(clock),
     .reset(reset|ofdm_reset),
     .enable(enable & ofdm_enable),
+
+    .reset_dot11(reset),
+    .state(state),
+    .old_state(old_state),
 
     .sample_in({ofdm_in_i, ofdm_in_q}),
     .sample_in_strobe(ofdm_in_stb),
@@ -487,12 +501,16 @@ ofdm_decoder ofdm_decoder_inst (
     .num_bits_to_decode(num_bits_to_decode),
     .rate(pkt_rate),
 
+    .csi(csi),
+    .csi_valid(s_csi_data_sbc_valid),
+    .noiseVar(s_noiseEst),
+    .noiseVar_valid(s_noiseEst_valid),
+
     .byte_out(byte_out),
     .byte_out_strobe(byte_out_strobe),
 
     .demod_out(demod_out),
     .demod_soft_bits(demod_soft_bits),
-    .demod_soft_bits_pos(demod_soft_bits_pos),
     .demod_out_strobe(demod_out_strobe),
 
     .deinterleave_erase_out(deinterleave_erase_out),
@@ -626,8 +644,10 @@ always @(posedge clock) begin
                 demod_is_ongoing <= 0;
                 sync_long_enable <= 0;
                 equalizer_enable <= 0;
+                ofdm_in_stb <= 0;
                 ofdm_enable <= 0;
                 ofdm_reset <= 0;
+                do_descramble <= 0;
                 pkt_len_total <= 16'hffff;
                 ht_sig1 <= 0;
                 ht_sig2 <= 0;
@@ -738,6 +758,7 @@ always @(posedge clock) begin
             end
 
             S_CHECK_SIGNAL: begin
+                ofdm_in_stb <= 0;
                 if (~legacy_sig_parity_ok) begin
                     pkt_header_valid_strobe <= 1;
                     status_code <= E_PARITY_FAIL;
@@ -868,6 +889,7 @@ always @(posedge clock) begin
             end
 
             S_CHECK_HT_SIG_CRC: begin
+                ofdm_in_stb <= 0;
                 ofdm_reset <= 1;
                 crc_reset <= 0;
                 crc_count <= crc_count + 1;

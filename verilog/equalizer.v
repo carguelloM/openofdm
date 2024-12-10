@@ -29,7 +29,10 @@ module equalizer
 
     // for side channel
     output wire [31:0] csi,
-    output wire csi_valid
+    output wire csi_valid,
+    output o_csi_data_sbc_valid,
+    output o_noiseEst_stb,
+    output signed [31:0] o_noiseEst
 );
 
 // mask[0] is DC, mask[1:26] -> 1,..., 26
@@ -207,8 +210,54 @@ wire lts_div_out_stb = div_out_stb;
 
 // for side channel
 reg sample_in_strobe_dly;
-assign csi = {lts_i_out, lts_q_out};
 assign csi_valid = ( (num_ofdm_sym == 1 || (pkt_ht==1 && num_ofdm_sym==5)) && state == S_CPE_ESTIMATE && sample_in_strobe_dly == 1 && enable && (~reset) );
+wire csi_data_sbc_valid = ((csi_valid == 1) && ((HT_DATA_SUBCARRIER_MASK[lts_raddr-1] && pkt_ht==1)||(DATA_SUBCARRIER_MASK[lts_raddr-1] && pkt_ht==0))) ? 1 : 0;
+assign csi = csi_valid ? {lts_i_out, lts_q_out} : 0;
+
+
+/////////////////////////////////
+// Noise Variance Calc
+
+wire signed [15:0] noise_i;
+wire signed [15:0] noise_q;
+assign noise_i = lts_i_out - input_i;
+assign noise_q = lts_q_out - input_q;
+reg signed [37:0] noise_i_sq_sum;
+reg signed [37:0] noise_q_sq_sum;
+
+reg calc_mean_strobe_dly;
+wire noiseEst_in_stb = (~calc_mean_strobe && calc_mean_strobe_dly);
+wire noiseEst_out_stb;
+wire signed [31:0] noiseEst;
+
+wire s_check_noiseest_sbc = (calc_mean_strobe && SUBCARRIER_MASK[lts_raddr-1]);
+
+assign o_noiseEst_stb = noiseEst_out_stb;
+assign o_noiseEst = (noiseEst==0?1:noiseEst);
+assign o_csi_data_sbc_valid = csi_data_sbc_valid;
+
+always @(posedge clock ) begin
+  if (reset) begin
+    calc_mean_strobe_dly <= 0;
+  end else begin
+    if (enable) begin
+      calc_mean_strobe_dly <= calc_mean_strobe;
+    end
+  end
+end
+
+complex_to_mag #(.DATA_WIDTH(32)) noiseEst_inst (
+    .clock(clock),
+    .enable(enable),
+    .reset(reset),
+
+    .i(noise_i_sq_sum[31:0]),
+    .q(noise_q_sq_sum[31:0]),
+    .input_strobe(noiseEst_in_stb),
+    .mag(noiseEst),
+    .mag_stb(noiseEst_out_stb)
+);
+/////////////////////////////////////
 
 always @(posedge clock) begin
     if (reset) begin
@@ -414,6 +463,9 @@ always @(posedge clock) begin
 
         num_output <= 0;
 
+        noise_i_sq_sum <= 0;
+        noise_q_sq_sum <= 0;
+
         state <= S_FIRST_LTS;
     end else if (enable) begin
         sample_in_strobe_dly <= sample_in_strobe;
@@ -446,6 +498,16 @@ always @(posedge clock) begin
                 end else begin
                     calc_mean_strobe <= 0;
                 end
+
+                ////////////////
+                // Noise Variance calculation
+                if(calc_mean_strobe) begin
+                  if (SUBCARRIER_MASK[lts_raddr-1]) begin
+                    noise_i_sq_sum <= noise_i_sq_sum + (noise_i * noise_i);
+                    noise_q_sq_sum <= noise_q_sq_sum + (noise_q * noise_q);
+                  end
+                end
+                ////////////////////////
 
                 lts_in_stb <= new_lts_stb;
                 {lts_i_in, lts_q_in} <= {new_lts_i, new_lts_q};

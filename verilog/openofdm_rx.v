@@ -307,7 +307,6 @@ module openofdm_rx #
     // decoding pipeline
     .demod_out(),
     .demod_soft_bits(),
-    .demod_soft_bits_pos(),
     .demod_out_strobe(),
 
     .deinterleave_erase_out(),
