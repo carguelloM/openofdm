@@ -67,9 +67,15 @@ integer short_preamble_detected_fd;
 integer long_preamble_detected_fd;
 integer sync_long_out_fd;
 
+integer demod_csi_square_over_noise_var_fd;
+integer demod_raw_llr_fd;
+integer demod_raw_llr_mult_csi_square_over_noise_var_fd;
+integer demod_raw_llr_mult_csi_square_over_noise_var_reduce_fd;
+// integer demod_llr_quant_threshold_fd;
+
 integer demod_out_fd;
 integer demod_soft_bits_fd;
-integer demod_soft_bits_pos_fd;
+// integer demod_soft_bits_pos_fd;
 integer deinterleave_erase_out_fd;
 integer conv_out_fd;
 integer descramble_out_fd;
@@ -125,6 +131,9 @@ integer equalizer_prod_scaled_fd;
 integer equalizer_mag_sq_fd;
 integer equalizer_out_fd;
 
+// Bit-true comparison of viterbi decoder input
+integer vit_in_fd;
+
 integer file_i, file_q, file_rssi_half_db, iq_sample_file;
 
 integer result, dummy;
@@ -132,6 +141,7 @@ reg [100*8-1:0] string;
 
 assign signal_watchdog_enable = (state <= S_DECODE_SIGNAL);
 
+reg [15:0] s_packet_cnt = 0;
 initial begin
   // $dumpfile("dot11.vcd");
   // $dumpvars;
@@ -214,9 +224,15 @@ always @(posedge clock) begin
     equalizer_out_fd = $fopen("./equalizer_out.txt", "w");        
 
     // ofdm decoder
+    demod_csi_square_over_noise_var_fd = $fopen("./demod_csi_square_over_noise_var.txt", "w");
+    demod_raw_llr_fd = $fopen("./demod_raw_llr.txt", "w");
+    demod_raw_llr_mult_csi_square_over_noise_var_fd = $fopen("./demod_raw_llr_mult_csi_square_over_noise_var.txt", "w");
+    demod_raw_llr_mult_csi_square_over_noise_var_reduce_fd = $fopen("./demod_raw_llr_mult_csi_square_over_noise_var_reduce.txt", "w");
+    // demod_llr_quant_threshold_fd = $fopen("./demod_llr_quant_threshold.txt", "w");
+
     demod_out_fd = $fopen("./demod_out.txt", "w");
     demod_soft_bits_fd = $fopen("./demod_soft_bits.txt", "w");
-    demod_soft_bits_pos_fd = $fopen("./demod_soft_bits_pos.txt", "w");
+    // demod_soft_bits_pos_fd = $fopen("./demod_soft_bits_pos.txt", "w");
     deinterleave_erase_out_fd = $fopen("./deinterleave_erase_out.txt", "w");
     conv_out_fd = $fopen("./conv_out.txt", "w");
     descramble_out_fd = $fopen("./descramble_out.txt", "w");
@@ -228,6 +244,9 @@ always @(posedge clock) begin
     status_code_fd = $fopen("./status_code.txt","w");
 
     phy_len_fd = $fopen("./phy_len.txt", "w");
+
+    // Bit-true soft bits 
+    vit_in_fd = $fopen("./conv_vit_sb_in.txt", "w");
 
   end
 end
@@ -250,6 +269,7 @@ always @(posedge clock) begin
     clk_count <= 0;
     sample_in_strobe <= 0;
     iq_count <= 0;
+    s_packet_cnt <= 0;
   end else if (enable) begin
     `ifdef CLK_SPEED_100M
     if (clk_count == 4) begin  // for 100M; 100/20 = 5
@@ -359,9 +379,14 @@ always @(posedge clock) begin
         $fclose(equalizer_mag_sq_fd);
         $fclose(equalizer_out_fd);
         // close ofdm decode files
+        $fclose(demod_csi_square_over_noise_var_fd);
+        $fclose(demod_raw_llr_fd);
+        $fclose(demod_raw_llr_mult_csi_square_over_noise_var_fd);
+        $fclose(demod_raw_llr_mult_csi_square_over_noise_var_reduce_fd);
+        // $fclose(demod_llr_quant_threshold_fd);
         $fclose(demod_out_fd);
         $fclose(demod_soft_bits_fd);
-        $fclose(demod_soft_bits_pos_fd);
+        // $fclose(demod_soft_bits_pos_fd);
         $fclose(deinterleave_erase_out_fd);
         $fclose(conv_out_fd);
         $fclose(descramble_out_fd);
@@ -371,6 +396,8 @@ always @(posedge clock) begin
         $fclose(byte_out_fd);
         $fclose(fcs_out_fd);
         $fclose(status_code_fd);
+
+        $fclose(vit_in_fd); // compare soft bits viterbi decoder input   
 
         $fclose(phy_len_fd);
         $finish;
@@ -387,6 +414,7 @@ always @(posedge clock) begin
     if(dot11_inst.fcs_out_strobe) begin
       $fwrite(fcs_out_fd, "%d %d\n", iq_count, dot11_inst.fcs_ok);
       $fflush(fcs_out_fd);
+      s_packet_cnt <= s_packet_cnt + 1;
     end
     if(dot11_inst.fcs_out_strobe && dot11_inst.phy_len_valid) begin
       $fwrite(phy_len_fd, "%d %d %d\n", iq_count, dot11_inst.n_ofdm_sym, dot11_inst.n_bit_in_last_sym);
@@ -405,31 +433,81 @@ always @(posedge clock) begin
       $fflush(ht_sig_fd);
     end
 
-    if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.ofdm_decoder_inst.demod_out_strobe) begin
-      $fwrite(demod_out_fd, "%d %b %b %b %b %b %b\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_out[0],dot11_inst.ofdm_decoder_inst.demod_out[1],dot11_inst.ofdm_decoder_inst.demod_out[2],dot11_inst.ofdm_decoder_inst.demod_out[3],dot11_inst.ofdm_decoder_inst.demod_out[4],dot11_inst.ofdm_decoder_inst.demod_out[5]);
-      $fwrite(demod_soft_bits_fd, "%d %b %b %b %b %b %b\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_soft_bits[0],dot11_inst.ofdm_decoder_inst.demod_soft_bits[1],dot11_inst.ofdm_decoder_inst.demod_soft_bits[2],dot11_inst.ofdm_decoder_inst.demod_soft_bits[3],dot11_inst.ofdm_decoder_inst.demod_soft_bits[4],dot11_inst.ofdm_decoder_inst.demod_soft_bits[5]);
-      $fwrite(demod_soft_bits_pos_fd, "%d %b %b %b %b\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[0],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[1],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[2],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[3]);
-      $fflush(demod_out_fd);
-      $fflush(demod_soft_bits_fd);
-      $fflush(demod_soft_bits_pos_fd);
+    if (dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_strobe && dot11_inst.demod_is_ongoing && dot11_inst.ofdm_decoder_inst.reset==0) begin
+      $fwrite(demod_csi_square_over_noise_var_fd,"%d %d\n",iq_count, 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.csi_square_over_noise_var_for_llr_delay1);
+      $fwrite(demod_raw_llr_fd, "%d %d %d %d %d %d %d\n",  iq_count, 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[0], 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[1], 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[2], 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q[0], 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q[1], 
+                                                            dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q[2]);
+      $fflush(demod_csi_square_over_noise_var_fd);
+      $fflush(demod_raw_llr_fd);
+    end
+    if (dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_mult_csi_square_over_noise_var_strobe && dot11_inst.demod_is_ongoing && dot11_inst.ofdm_decoder_inst.reset==0) begin
+      $fwrite(demod_raw_llr_mult_csi_square_over_noise_var_fd, "%d %d %d %d %d %d %d\n", iq_count, 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var[0], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var[1], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var[2], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var[0], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var[1], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var[2]);
+      $fwrite(demod_raw_llr_mult_csi_square_over_noise_var_reduce_fd, "%d %d %d %d %d %d %d\n", iq_count, 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var_reduce[0], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var_reduce[1], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i_mult_csi_square_over_noise_var_reduce[2], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var_reduce[0], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var_reduce[1], 
+                                                                                          dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_q_mult_csi_square_over_noise_var_reduce[2]);
+      // $fwrite(demod_llr_quant_threshold_fd, "%d %d %d %d %d %d %d %d\n",                 iq_count, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold1, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold2, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold3, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold4, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold5, 
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold6,
+      //                                                                                    dot11_inst.ofdm_decoder_inst.demod_inst.threshold7);
+      // $fflush(demod_llr_quant_threshold_fd);
+      $fflush(demod_raw_llr_mult_csi_square_over_noise_var_fd);
+      $fflush(demod_raw_llr_mult_csi_square_over_noise_var_reduce_fd);
     end
 
-    if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.deinterleave_erase_out_strobe) begin
-      $fwrite(deinterleave_erase_out_fd, "%d %b %b %b %b %b %b %b %b\n", iq_count, dot11_inst.deinterleave_erase_out[0], dot11_inst.deinterleave_erase_out[1], dot11_inst.deinterleave_erase_out[2], dot11_inst.deinterleave_erase_out[3], dot11_inst.deinterleave_erase_out[4], dot11_inst.deinterleave_erase_out[5], dot11_inst.deinterleave_erase_out[6],  dot11_inst.deinterleave_erase_out[7]);
+    // if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.ofdm_decoder_inst.demod_out_strobe) begin
+    if (dot11_inst.ofdm_decoder_inst.demod_out_strobe && dot11_inst.demod_is_ongoing && dot11_inst.ofdm_decoder_inst.reset==0) begin
+      $fwrite(demod_out_fd, "%d %b %b %b %b %b %b\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_out[0],dot11_inst.ofdm_decoder_inst.demod_out[1],dot11_inst.ofdm_decoder_inst.demod_out[2],dot11_inst.ofdm_decoder_inst.demod_out[3],dot11_inst.ofdm_decoder_inst.demod_out[4],dot11_inst.ofdm_decoder_inst.demod_out[5]);
+      $fwrite(demod_soft_bits_fd, "%d %d %d %d %d %d %d\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_soft_bits[2:0],dot11_inst.ofdm_decoder_inst.demod_soft_bits[5:3],dot11_inst.ofdm_decoder_inst.demod_soft_bits[8:6],dot11_inst.ofdm_decoder_inst.demod_soft_bits[11:9],dot11_inst.ofdm_decoder_inst.demod_soft_bits[14:12],dot11_inst.ofdm_decoder_inst.demod_soft_bits[17:15]);
+      // $fwrite(demod_soft_bits_pos_fd, "%d %b %b %b %b\n",iq_count, dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[0],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[1],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[2],dot11_inst.ofdm_decoder_inst.demod_soft_bits_pos[3]);
+      $fflush(demod_out_fd);
+      $fflush(demod_soft_bits_fd);
+      // $fflush(demod_soft_bits_pos_fd);
+    end
+
+    // if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.deinterleave_erase_out_strobe) begin
+    if (dot11_inst.deinterleave_erase_out_strobe && dot11_inst.demod_is_ongoing && dot11_inst.ofdm_decoder_inst.reset==0) begin
+      // $fwrite(deinterleave_erase_out_fd, "%d %b %b %b %b %b %b %b %b\n", iq_count, dot11_inst.deinterleave_erase_out[0], dot11_inst.deinterleave_erase_out[1], dot11_inst.deinterleave_erase_out[2], dot11_inst.deinterleave_erase_out[3], dot11_inst.deinterleave_erase_out[4], dot11_inst.deinterleave_erase_out[5], dot11_inst.deinterleave_erase_out[6],  dot11_inst.deinterleave_erase_out[7]);
+      $fwrite(deinterleave_erase_out_fd, "%d %d %d %d %d\n", iq_count, dot11_inst.deinterleave_erase_out[2:0], dot11_inst.deinterleave_erase_out[5:3], dot11_inst.deinterleave_erase_out[6], dot11_inst.deinterleave_erase_out[7]);
       $fflush(deinterleave_erase_out_fd);
     end
 
+    // comparing conv out is difficult for L-SIG HT-SIG1-2 due to some deinterleaver decoder and descrambler delay
+    // since byte out is compared for L-SIG HT-SIG1-2 later on, just skip conv out copmarison for L-SIG HT-SIG1-2
     if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.conv_decoder_out_stb && dot11_inst.ofdm_decoder_inst.reset==0) begin
+    // if (dot11_inst.conv_decoder_out_stb && dot11_inst.ofdm_decoder_inst.reset==0) begin
       $fwrite(conv_out_fd, "%d %b\n", iq_count, dot11_inst.conv_decoder_out);
       $fflush(conv_out_fd);
     end
 
-    if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.descramble_out_strobe) begin
+    // No need to compare descramble out for L-SIG, HT-SIG1 and HT-SIG2 because they do not use it.
+    if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.descramble_out_strobe && dot11_inst.ofdm_decoder_inst.reset==0) begin
+    // if (dot11_inst.descramble_out_strobe) begin
       $fwrite(descramble_out_fd, "%d %b\n", iq_count, dot11_inst.descramble_out);
       $fflush(descramble_out_fd);
     end
 
-    if ((dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.byte_out_strobe) begin
+    if ((dot11_inst.state == S_DECODE_SIGNAL || dot11_inst.state == S_HT_SIGNAL || dot11_inst.state == S_MPDU_DELIM || dot11_inst.state == S_DECODE_DATA || dot11_inst.state == S_MPDU_PAD) && dot11_inst.byte_out_strobe && dot11_inst.ofdm_decoder_inst.reset==0) begin
+    // if (dot11_inst.byte_out_strobe) begin
       $fwrite(byte_out_fd, "%d %02x\n", iq_count, dot11_inst.byte_out);
       $fflush(byte_out_fd);
     end
@@ -501,7 +579,7 @@ always @(posedge clock) begin
       $fflush(next_phase_correction_fd);
     end
     if (dot11_inst.sync_long_inst.fft_in_stb && dot11_inst.sync_long_inst.enable && ~dot11_inst.sync_long_inst.reset && dot11_inst.demod_is_ongoing) begin//add demod_is_ongoing to prevent the garbage fft in after decoding is done overlap with the early sync_short of next packet
-      $fwrite(fft_in_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.s_fft_in_re, dot11_inst.sync_long_inst.s_fft_in_im);
+      $fwrite(fft_in_fd, "%d %d %d\n", iq_count, dot11_inst.sync_long_inst.fft_in_re_bitshift, dot11_inst.sync_long_inst.fft_in_im_bitshift);
       $fflush(fft_in_fd);
     end
     if (dot11_inst.rotafft_inst.output_strobe) begin
@@ -625,7 +703,7 @@ signal_watchdog signal_watchdog_inst (
   // frequency offset monitor: too big fo estimated by sync_short means sth wrong
   .phase_offset(phase_offset_for_reg_read),
   .long_preamble_detected(long_preamble_detected),
-  .phase_offset_abs_th(11),
+  .phase_offset_abs_th(22),
 
   .event_selector(0),
   .event_counter(),
@@ -639,6 +717,7 @@ dot11 dot11_inst (
   .clock(clock),
   .enable(enable),
   .reset(reset | receiver_rst),
+  .reset_without_watchdog(reset),
 
   //.set_stb(set_stb),
   //.set_addr(set_addr),
