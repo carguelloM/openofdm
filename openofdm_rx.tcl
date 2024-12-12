@@ -305,6 +305,7 @@ set files [list \
  "[file normalize "$origin_dir/ip_repo/div_gen_new/src/div_gen.v"]"\
  "[file normalize "$origin_dir/ip_repo/div_gen_new/src/div_gen_div_gen_0_0/div_gen_div_gen_0_0.xci"]"\
  "[file normalize "$origin_dir/ip_repo/div_gen_new/src/div_gen_xlslice_0_0/div_gen_xlslice_0_0.xci"]"\
+ "[file normalize "$origin_dir/ip_repo/div_gen_csi_over_nova/div_gen_csi_over_nova.xci"]"\
 ]
 # If you want to make a copy of the file to new src folder, use following command
 # set imported_files [import_files -fileset sources_1 $files]
