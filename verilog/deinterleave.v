@@ -99,12 +99,12 @@ always @* begin
             if(bit_outa[lut_bita] == 1'b1)
                 out_bits[2:0] = 3'b111;
             else
-                out_bits[2:0] = 3'b011;
+                out_bits[2:0] = 3'b000;
 
             if(bit_outb[lut_bitb] == 1'b1)
                 out_bits[5:3] = 3'b111;
             else
-                out_bits[5:3] = 3'b011;
+                out_bits[5:3] = 3'b000;
         end
     end else begin
         out_bits[2:0] = 0;
