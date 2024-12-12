@@ -190,8 +190,10 @@ reg signed [(16+12+34):0] raw_llr_i_mult_csi_square_over_noise_var [2:0];
 reg signed [(16+12+34):0] raw_llr_q_mult_csi_square_over_noise_var [2:0];
 wire raw_llr_mult_csi_square_over_noise_var_strobe;
 
-wire signed [12:0] raw_llr_i_mult_csi_square_over_noise_var_reduce [2:0];
-wire signed [12:0] raw_llr_q_mult_csi_square_over_noise_var_reduce [2:0];
+// wire signed [12:0] raw_llr_i_mult_csi_square_over_noise_var_reduce [2:0];
+// wire signed [12:0] raw_llr_q_mult_csi_square_over_noise_var_reduce [2:0];
+wire signed [(12+34):0] raw_llr_i_mult_csi_square_over_noise_var_reduce [2:0];
+wire signed [(12+34):0] raw_llr_q_mult_csi_square_over_noise_var_reduce [2:0];
 
 reg [4:0] input_strobe_delay;
 reg [7:0] csi_square_over_noise_var_addr_top; //48 for 11a/g; 52 for 11n; 242 for 11ax
@@ -225,12 +227,18 @@ assign  QAM64_VALUE8_mult_q = {QAM64_VALUE16_mult_q[16+12], QAM64_VALUE16_mult_q
 assign  QAM64_VALUE4_mult_q = {QAM64_VALUE8_mult_q[16+12], QAM64_VALUE8_mult_q[(16+12):1]};
 assign QAM64_VALUE12_mult_q = QAM64_VALUE12*cons_q_delayed;
 
-assign raw_llr_i_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])));
-assign raw_llr_q_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])));
-assign raw_llr_i_mult_csi_square_over_noise_var_reduce[1] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])));
-assign raw_llr_q_mult_csi_square_over_noise_var_reduce[1] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])));
-assign raw_llr_i_mult_csi_square_over_noise_var_reduce[2] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])));
-assign raw_llr_q_mult_csi_square_over_noise_var_reduce[2] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])));
+// assign raw_llr_i_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])));
+// assign raw_llr_q_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])));
+// assign raw_llr_i_mult_csi_square_over_noise_var_reduce[1] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16])));
+// assign raw_llr_q_mult_csi_square_over_noise_var_reduce[1] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16])));
+// assign raw_llr_i_mult_csi_square_over_noise_var_reduce[2] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16])));
+// assign raw_llr_q_mult_csi_square_over_noise_var_reduce[2] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16])));
+assign raw_llr_i_mult_csi_square_over_noise_var_reduce[0] = $signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16]);
+assign raw_llr_q_mult_csi_square_over_noise_var_reduce[0] = $signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16]);
+assign raw_llr_i_mult_csi_square_over_noise_var_reduce[1] = $signed(raw_llr_i_mult_csi_square_over_noise_var[1][(16+12+34):16]);
+assign raw_llr_q_mult_csi_square_over_noise_var_reduce[1] = $signed(raw_llr_q_mult_csi_square_over_noise_var[1][(16+12+34):16]);
+assign raw_llr_i_mult_csi_square_over_noise_var_reduce[2] = $signed(raw_llr_i_mult_csi_square_over_noise_var[2][(16+12+34):16]);
+assign raw_llr_q_mult_csi_square_over_noise_var_reduce[2] = $signed(raw_llr_q_mult_csi_square_over_noise_var[2][(16+12+34):16]);
 
 assign raw_llr_strobe = input_strobe_delay[1];
 assign raw_llr_mult_csi_square_over_noise_var_strobe = input_strobe_delay[2];
