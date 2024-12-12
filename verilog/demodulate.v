@@ -197,13 +197,13 @@ reg [4:0] input_strobe_delay;
 reg [7:0] csi_square_over_noise_var_addr_top; //48 for 11a/g; 52 for 11n; 242 for 11ax
 reg signed [33:0] csi_square_over_noise_var_for_llr_delay1;//for aligning of raw_llr_i_mult_csi_square_over_noise_var[0] <= raw_llr_i[0] * csi_square_over_noise_var_for_llr;
 
-reg signed [12:0] threshold1;//the range of threshold is like -3*550 ~ 3*550, so reduce it to signed 13bit -2048 ~ 2047
-reg signed [12:0] threshold2;
-reg signed [12:0] threshold3;
-reg signed [12:0] threshold4;
-reg signed [12:0] threshold5;
-reg signed [12:0] threshold6;
-reg signed [12:0] threshold7;
+reg signed [11:0] threshold1;//the range of threshold is like -3*550 ~ 3*550, so reduce it to signed 12bit -2048 ~ 2047
+reg signed [11:0] threshold2;
+reg signed [11:0] threshold3;
+reg signed [11:0] threshold4;
+reg signed [11:0] threshold5;
+reg signed [11:0] threshold6;
+reg signed [11:0] threshold7;
 
 integer i;
 reg [2:0] soft_bits_i [2:0];
