@@ -434,9 +434,9 @@ always @(posedge clock) begin
     end
 
     if (dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_strobe && dot11_inst.demod_is_ongoing && dot11_inst.ofdm_decoder_inst.reset==0) begin
-      $fwrite(demod_csi_square_over_noise_var_fd,"%d %d\n",iq_count, 
+      $fwrite(demod_csi_square_over_noise_var_fd,"%d %d\n", iq_count, 
                                                             dot11_inst.ofdm_decoder_inst.demod_inst.csi_square_over_noise_var_for_llr_delay1);
-      $fwrite(demod_raw_llr_fd, "%d %d %d %d %d %d %d\n",  iq_count, 
+      $fwrite(demod_raw_llr_fd, "%d %d %d %d %d %d %d\n",   iq_count, 
                                                             dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[0], 
                                                             dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[1], 
                                                             dot11_inst.ofdm_decoder_inst.demod_inst.raw_llr_i[2], 
