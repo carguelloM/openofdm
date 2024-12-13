@@ -505,41 +505,143 @@ always @(posedge clock) begin
     threshold6 <= (rate[7]?THRESHOLD6_HT:THRESHOLD6_LEGACY);
     threshold7 <= (rate[7]?THRESHOLD7_HT:THRESHOLD7_LEGACY);
 
-    for (i = 0; i<3; i = i + 1) begin
-      if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold1)
-        soft_bits_i[i] <= 7;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold2)
-        soft_bits_i[i] <= 6;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold3)
-        soft_bits_i[i] <= 5;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold4)
-        soft_bits_i[i] <= 4;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold5)
-        soft_bits_i[i] <= 3;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold6)
-        soft_bits_i[i] <= 2;
-      else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold7)
-        soft_bits_i[i] <= 1;
-      else
-        soft_bits_i[i] <= 0;
+    if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold1)
+      soft_bits_i[0] <= 7;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold2)
+      soft_bits_i[0] <= 6;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold3)
+      soft_bits_i[0] <= 5;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold4)
+      soft_bits_i[0] <= 4;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold5)
+      soft_bits_i[0] <= 3;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold6)
+      soft_bits_i[0] <= 2;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[0] < threshold7)
+      soft_bits_i[0] <= 1;
+    else
+      soft_bits_i[0] <= 0;
 
-      if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold1)
-        soft_bits_q[i] <= 7;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold2)
-        soft_bits_q[i] <= 6;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold3)
-        soft_bits_q[i] <= 5;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold4)
-        soft_bits_q[i] <= 4;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold5)
-        soft_bits_q[i] <= 3;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold6)
-        soft_bits_q[i] <= 2;
-      else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold7)
-        soft_bits_q[i] <= 1;
-      else
-        soft_bits_q[i] <= 0;
-    end
+    if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold1)
+      soft_bits_q[0] <= 7;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold2)
+      soft_bits_q[0] <= 6;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold3)
+      soft_bits_q[0] <= 5;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold4)
+      soft_bits_q[0] <= 4;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold5)
+      soft_bits_q[0] <= 3;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold6)
+      soft_bits_q[0] <= 2;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[0] < threshold7)
+      soft_bits_q[0] <= 1;
+    else
+      soft_bits_q[0] <= 0;
+
+    if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold1)
+      soft_bits_i[1] <= 7;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold2)
+      soft_bits_i[1] <= 6;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold3)
+      soft_bits_i[1] <= 5;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold4)
+      soft_bits_i[1] <= 4;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold5)
+      soft_bits_i[1] <= 3;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold6)
+      soft_bits_i[1] <= 2;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[1] < threshold7)
+      soft_bits_i[1] <= 1;
+    else
+      soft_bits_i[1] <= 0;
+
+    if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold1)
+      soft_bits_q[1] <= 7;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold2)
+      soft_bits_q[1] <= 6;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold3)
+      soft_bits_q[1] <= 5;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold4)
+      soft_bits_q[1] <= 4;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold5)
+      soft_bits_q[1] <= 3;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold6)
+      soft_bits_q[1] <= 2;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[1] < threshold7)
+      soft_bits_q[1] <= 1;
+    else
+      soft_bits_q[1] <= 0;
+
+    if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold1)
+      soft_bits_i[2] <= 7;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold2)
+      soft_bits_i[2] <= 6;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold3)
+      soft_bits_i[2] <= 5;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold4)
+      soft_bits_i[2] <= 4;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold5)
+      soft_bits_i[2] <= 3;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold6)
+      soft_bits_i[2] <= 2;
+    else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[2] < threshold7)
+      soft_bits_i[2] <= 1;
+    else
+      soft_bits_i[2] <= 0;
+
+    if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold1)
+      soft_bits_q[2] <= 7;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold2)
+      soft_bits_q[2] <= 6;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold3)
+      soft_bits_q[2] <= 5;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold4)
+      soft_bits_q[2] <= 4;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold5)
+      soft_bits_q[2] <= 3;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold6)
+      soft_bits_q[2] <= 2;
+    else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[2] < threshold7)
+      soft_bits_q[2] <= 1;
+    else
+      soft_bits_q[2] <= 0;
+
+    // for (i = 0; i<3; i = i + 1) begin
+    //   if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold1)
+    //     soft_bits_i[i] <= 7;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold2)
+    //     soft_bits_i[i] <= 6;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold3)
+    //     soft_bits_i[i] <= 5;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold4)
+    //     soft_bits_i[i] <= 4;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold5)
+    //     soft_bits_i[i] <= 3;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold6)
+    //     soft_bits_i[i] <= 2;
+    //   else if (raw_llr_i_mult_csi_square_over_noise_var_reduce[i] < threshold7)
+    //     soft_bits_i[i] <= 1;
+    //   else
+    //     soft_bits_i[i] <= 0;
+
+    //   if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold1)
+    //     soft_bits_q[i] <= 7;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold2)
+    //     soft_bits_q[i] <= 6;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold3)
+    //     soft_bits_q[i] <= 5;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold4)
+    //     soft_bits_q[i] <= 4;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold5)
+    //     soft_bits_q[i] <= 3;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold6)
+    //     soft_bits_q[i] <= 2;
+    //   else if (raw_llr_q_mult_csi_square_over_noise_var_reduce[i] < threshold7)
+    //     soft_bits_q[i] <= 1;
+    //   else
+    //     soft_bits_q[i] <= 0;
+    // end
   end
 end
 
