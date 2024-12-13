@@ -168,19 +168,21 @@ reg [5:0] bits;
 reg [5:0] bits_delay1;
 reg [5:0] bits_delay2;
 
-wire signed [(16+12):0] QAM16_VALUE8_mult_i;
+reg  signed [(16+12):0] QAM16_VALUE8_mult_i;
+reg  signed [(16+12):0] QAM16_VALUE8_mult_q;
+
+reg  signed [(16+12):0] QAM64_VALUE16_mult_i;
+reg  signed [(16+12):0] QAM64_VALUE12_mult_i;
+reg  signed [(16+12):0] QAM64_VALUE16_mult_q;
+reg  signed [(16+12):0] QAM64_VALUE12_mult_q;
+
 wire signed [(16+12):0] QAM16_VALUE4_mult_i;
-wire signed [(16+12):0] QAM16_VALUE8_mult_q;
 wire signed [(16+12):0] QAM16_VALUE4_mult_q;
 
-wire signed [(16+12):0] QAM64_VALUE16_mult_i;
 wire signed [(16+12):0] QAM64_VALUE8_mult_i;
 wire signed [(16+12):0] QAM64_VALUE4_mult_i;
-wire signed [(16+12):0] QAM64_VALUE12_mult_i;
-wire signed [(16+12):0] QAM64_VALUE16_mult_q;
 wire signed [(16+12):0] QAM64_VALUE8_mult_q;
 wire signed [(16+12):0] QAM64_VALUE4_mult_q;
-wire signed [(16+12):0] QAM64_VALUE12_mult_q;
 
 reg signed [(16+12):0] raw_llr_i [2:0]; //16bit I/Q, BPSK_VALUE4 4096 == 12bit
 reg signed [(16+12):0] raw_llr_q [2:0];
@@ -213,19 +215,19 @@ reg [2:0] soft_bits_q [2:0];
 
 assign bits_output = bits_delay2;//two extral clock to sync with soft_bits_i/soft_bits_q
 
-assign QAM16_VALUE8_mult_i = QAM16_VALUE8*cons_i_delayed;
+// assign QAM16_VALUE8_mult_i = QAM16_VALUE8*cons_i_delayed;
 assign QAM16_VALUE4_mult_i = {QAM16_VALUE8_mult_i[16+12], QAM16_VALUE8_mult_i[(16+12):1]};
-assign QAM16_VALUE8_mult_q = QAM16_VALUE8*cons_q_delayed;
+// assign QAM16_VALUE8_mult_q = QAM16_VALUE8*cons_q_delayed;
 assign QAM16_VALUE4_mult_q = {QAM16_VALUE8_mult_q[16+12], QAM16_VALUE8_mult_q[(16+12):1]};
 
-assign QAM64_VALUE16_mult_i = QAM64_VALUE16*cons_i_delayed;
+// assign QAM64_VALUE16_mult_i = QAM64_VALUE16*cons_i_delayed;
 assign  QAM64_VALUE8_mult_i = {QAM64_VALUE16_mult_i[16+12], QAM64_VALUE16_mult_i[(16+12):1]};
 assign  QAM64_VALUE4_mult_i = {QAM64_VALUE8_mult_i[16+12], QAM64_VALUE8_mult_i[(16+12):1]};
-assign QAM64_VALUE12_mult_i = QAM64_VALUE12*cons_i_delayed;
-assign QAM64_VALUE16_mult_q = QAM64_VALUE16*cons_q_delayed;
+// assign QAM64_VALUE12_mult_i = QAM64_VALUE12*cons_i_delayed;
+// assign QAM64_VALUE16_mult_q = QAM64_VALUE16*cons_q_delayed;
 assign  QAM64_VALUE8_mult_q = {QAM64_VALUE16_mult_q[16+12], QAM64_VALUE16_mult_q[(16+12):1]};
 assign  QAM64_VALUE4_mult_q = {QAM64_VALUE8_mult_q[16+12], QAM64_VALUE8_mult_q[(16+12):1]};
-assign QAM64_VALUE12_mult_q = QAM64_VALUE12*cons_q_delayed;
+// assign QAM64_VALUE12_mult_q = QAM64_VALUE12*cons_q_delayed;
 
 // assign raw_llr_i_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_i_mult_csi_square_over_noise_var[0][(16+12+34):16])));
 // assign raw_llr_q_mult_csi_square_over_noise_var_reduce[0] = ($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])<$signed(-2048)?$signed(-2048):($signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])>$signed(2047)?$signed(2047):$signed(raw_llr_q_mult_csi_square_over_noise_var[0][(16+12+34):16])));
@@ -263,6 +265,14 @@ always @(posedge clock) begin
     cons_i_delayed <= 0;
     cons_q_delayed <= 0;
     mod <= 0;
+
+    QAM16_VALUE8_mult_i <= 0;
+    QAM16_VALUE8_mult_q <= 0;
+
+    QAM64_VALUE16_mult_i <= 0;
+    QAM64_VALUE12_mult_i <= 0;
+    QAM64_VALUE16_mult_q <= 0;
+    QAM64_VALUE12_mult_q <= 0;
 
     raw_llr_i_mult_csi_square_over_noise_var[0] <= 0;
     raw_llr_i_mult_csi_square_over_noise_var[1] <= 0;
@@ -302,6 +312,14 @@ always @(posedge clock) begin
     abs_cons_q <= cons_q[15]? ~cons_q+1: cons_q;
     cons_i_delayed <= cons_i;
     cons_q_delayed <= cons_q;
+
+    QAM16_VALUE8_mult_i <= QAM16_VALUE8*cons_i;
+    QAM16_VALUE8_mult_q <= QAM16_VALUE8*cons_q;
+
+    QAM64_VALUE16_mult_i <= QAM64_VALUE16*cons_i;
+    QAM64_VALUE12_mult_i <= QAM64_VALUE12*cons_i;
+    QAM64_VALUE16_mult_q <= QAM64_VALUE16*cons_q;
+    QAM64_VALUE12_mult_q <= QAM64_VALUE12*cons_q;
 
     case({rate[7], rate[3:0]})
       // 802.11a rates
