@@ -64,12 +64,12 @@ puts $fd "`define BETTER_SENSITIVITY"
 
 if {$ARGUMENT3 eq ""} {
   puts $fd "`define SAMPLE_FILE \"../../../../../testing_inputs/simulated/ht_mcs7_gi1_aggr0_len14_pre100_post200_openwifi.txt\""
-  puts $fd "`define FC_IN_FILE \"../../../../../testing_inputs/simulated/ht_mcs7_gi1_aggr0_len14_pre100_post200_openwifi_Fc_input.txt\""
+  # puts $fd "`define FC_IN_FILE \"../../../../../testing_inputs/simulated/ht_mcs7_gi1_aggr0_len14_pre100_post200_openwifi_Fc_input.txt\""
 } else {
   puts $fd "`define SAMPLE_FILE \"$ARGUMENT3\""
   set fc_filename [string range $ARGUMENT3 0 end-4]
   append fc_filename "_Fc_input.txt"
-  puts $fd "`define FC_IN_FILE \"$fc_filename\""
+  # puts $fd "`define FC_IN_FILE \"$fc_filename\""
 }
 if {$ARGUMENT4 eq ""} {
   puts $fd " "
