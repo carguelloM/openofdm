@@ -86,7 +86,10 @@ wire reset_internal = (enable==0 && enable_delay==1);//reset internal after the 
 
 reg ht;
 reg [5:0] num_data_carrier;
-reg [7:0] num_ofdm_sym;
+// in principle: need 11 bits: log2((16+(2^12)*8+6)/24) = 10.4160. Max 2^12 bytes in case of legacy. 16 service bits. 6 tail bits.. 24 MCS0 N_DBPS
+// but here we only use till 5. so we can use 3 bits and saturation operation.
+reg [2:0] num_ofdm_sym;
+
 wire [5:0] edge_sc_end, edge_sc_init;
 assign edge_sc_end = ht? 28:26;
 assign edge_sc_init = ht? 38:40;
@@ -605,7 +608,7 @@ always @(posedge clock) begin
                 input_i <= 0;
                 input_q <= 0;
                 lts_raddr <= 0;
-                num_ofdm_sym <= num_ofdm_sym + 1;
+                num_ofdm_sym <= (num_ofdm_sym == 7? num_ofdm_sym : (num_ofdm_sym + 1));
                 state <= S_CPE_ESTIMATE;
             end
 
