@@ -107,7 +107,7 @@ end else begin
             end_calculation <= 1;
         end else begin
             n_bit_in_last_sym <= n_bit_in_last_sym - n_dbps;
-            n_ofdm_sym = n_ofdm_sym + 1;
+            n_ofdm_sym = (n_ofdm_sym == 32767? n_ofdm_sym : (n_ofdm_sym + 1)); // normally should not run into saturation!
         end
     end
 end

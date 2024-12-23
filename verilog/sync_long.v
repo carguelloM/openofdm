@@ -32,7 +32,7 @@ module sync_long (
 
     output reg [31:0] sample_out,
     output reg sample_out_strobe,
-    output reg [15:0] num_ofdm_symbol,
+    output reg [15:0] num_ofdm_symbol, //max 20166 = (22+65535*8)/26
 
     `DEBUG_PREFIX input phase_offset_override_en,
     `DEBUG_PREFIX input signed [15:0] phase_offset_override_val,
@@ -491,7 +491,7 @@ always @(posedge clock) begin
                     if (in_offset == 63) begin
                         fft_din_data_tlast <= 1'b0;
                         fft_loading <= 0;
-                        num_ofdm_symbol <= num_ofdm_symbol + 1;
+                        num_ofdm_symbol <= (num_ofdm_symbol == 32767? num_ofdm_symbol : (num_ofdm_symbol + 1)); // normally should not run into saturation!
                         if (num_ofdm_symbol > 0) begin
                             // skip the Guard Interval for data symbols
                             in_raddr <= in_raddr + gi_skip;

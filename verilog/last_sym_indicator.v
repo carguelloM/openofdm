@@ -22,9 +22,13 @@ reg state;
 reg ofdm_sym_valid_reg;
 
 reg [8:0] n_dbps;
-reg [7:0] n_ofdm_sym;
-wire [16:0] n_bit;
-wire [16:0] n_bit_target;
+
+// need 11 bits: log2((16+(2^12)*8+6)/24) = 10.4160. Max 2^12 bytes in case of legacy. 16 service bits. 6 tail bits.. 24 MCS0 N_DBPS
+// to prevent overflow of n_ofdm_sym+ht_correction, allocate 12 bits.
+reg [11:0] n_ofdm_sym; 
+
+wire [20:0] n_bit;
+wire [20:0] n_bit_target;
 
 assign n_bit = n_dbps*(n_ofdm_sym+ht_correction);
 assign n_bit_target = (({1'b0,pkt_len}<<3) + 16 + 6);
@@ -101,7 +105,7 @@ always @(posedge clock) begin
         last_sym_flag <= 0;
         state <= S_WAIT_FOR_ALL_SYM;
     end else if (ofdm_sym_valid==0 && ofdm_sym_valid_reg==1) begin //falling edge means that current deinterleaving is finished, then we can start flush to speedup finishing work.
-        n_ofdm_sym <= n_ofdm_sym + 1;
+        n_ofdm_sym <= (n_ofdm_sym == 2047? n_ofdm_sym : (n_ofdm_sym + 1)); // prevent overflow. normally should not run into this condition!
         if (enable) begin
             case(state)
                 S_WAIT_FOR_ALL_SYM: begin
