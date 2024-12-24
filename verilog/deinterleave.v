@@ -18,6 +18,9 @@ module deinterleave
     output output_strobe
 );
 
+localparam SOFT_VALUE_0 = 0;
+localparam SOFT_VALUE_7 = 7;
+
 wire ht = rate[7];
 
 wire [5:0] num_data_carrier = ht? 52: 48;
@@ -97,14 +100,14 @@ always @* begin
         // Hard decoding
         end else begin
             if(bit_outa[lut_bita] == 1'b1)
-                out_bits[2:0] = 3'b111;
+                out_bits[2:0] = SOFT_VALUE_7;
             else
-                out_bits[2:0] = 3'b000;
+                out_bits[2:0] = SOFT_VALUE_0;
 
             if(bit_outb[lut_bitb] == 1'b1)
-                out_bits[5:3] = 3'b111;
+                out_bits[5:3] = SOFT_VALUE_7;
             else
-                out_bits[5:3] = 3'b000;
+                out_bits[5:3] = SOFT_VALUE_0;
         end
     end else begin
         out_bits[2:0] = 0;
