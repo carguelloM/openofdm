@@ -10,6 +10,8 @@ module demodulate (
     input signed [15:0] cons_q,
     input input_strobe,
 
+    input soft_bits_method,
+
     output reg [7:0] csi_square_over_noise_var_read_addr,
     input signed [33:0] csi_square_over_noise_var_for_llr,
 
@@ -213,6 +215,9 @@ integer i;
 reg [2:0] soft_bits_i [2:0];
 reg [2:0] soft_bits_q [2:0];
 
+reg [2:0] soft_bits_i_old_delay2 [2:0]; // old method (hard partition) of soft bits
+reg [2:0] soft_bits_q_old_delay2 [2:0]; // old method (hard partition) of soft bits
+
 assign bits_output = bits_delay2;//two extral clock to sync with soft_bits_i/soft_bits_q
 
 // assign QAM16_VALUE8_mult_i = QAM16_VALUE8*cons_i_delayed;
@@ -245,7 +250,7 @@ assign raw_llr_q_mult_csi_square_over_noise_var_reduce[2] = $signed(raw_llr_q_mu
 assign raw_llr_strobe = input_strobe_delay[1];
 assign raw_llr_mult_csi_square_over_noise_var_strobe = input_strobe_delay[2];
 
-assign soft_bits = {soft_bits_q[2], soft_bits_q[1], soft_bits_q[0], soft_bits_i[2], soft_bits_i[1], soft_bits_i[0]};
+assign soft_bits = ( soft_bits_method? {soft_bits_q_old_delay2[2], soft_bits_q_old_delay2[1], soft_bits_q_old_delay2[0], soft_bits_i_old_delay2[2], soft_bits_i_old_delay2[1], soft_bits_i_old_delay2[0]} : {soft_bits_q[2], soft_bits_q[1], soft_bits_q[0], soft_bits_i[2], soft_bits_i[1], soft_bits_i[0]} );
 
 assign output_strobe = (enable? input_strobe_delay[3] : 0);//sync with soft_bits_i/soft_bits_q
 
@@ -662,5 +667,613 @@ always @(posedge clock) begin
     // end
   end
 end
+
+// Following part is old method (hard partition) to generate soft bits
+// for performance comparison between LLR and old soft bits method
+// Comment out the HAS_OLD_SOFT_BITS_METHOD definition to disable this part for resource saving
+`define HAS_OLD_SOFT_BITS_METHOD 1
+
+`ifdef HAS_OLD_SOFT_BITS_METHOD
+
+// localparam SOFT_VALUE_0 = 0;
+// localparam SOFT_VALUE_1 = 1;
+// localparam SOFT_VALUE_2 = 2;
+// localparam SOFT_VALUE_3 = 3;
+// localparam SOFT_VALUE_4 = 4;
+// localparam SOFT_VALUE_5 = 5;
+// localparam SOFT_VALUE_6 = 6;
+// localparam SOFT_VALUE_7 = 7;
+localparam SOFT_VALUE_0 = 7;
+localparam SOFT_VALUE_1 = 6;
+localparam SOFT_VALUE_2 = 5;
+localparam SOFT_VALUE_3 = 4;
+localparam SOFT_VALUE_4 = 3;
+localparam SOFT_VALUE_5 = 2;
+localparam SOFT_VALUE_6 = 1;
+localparam SOFT_VALUE_7 = 0;
+
+reg [2:0] soft_bits_i_old [2:0];
+reg [2:0] soft_bits_q_old [2:0];
+
+reg [2:0] soft_bits_i_old_delay1 [2:0];
+reg [2:0] soft_bits_q_old_delay1 [2:0];
+
+always @(posedge clock) begin
+  if (reset) begin
+    soft_bits_i_old[0] <= 0;
+    soft_bits_i_old[1] <= 4;
+    soft_bits_i_old[2] <= 7;
+    soft_bits_q_old[0] <= 7;
+    soft_bits_q_old[1] <= 0;
+    soft_bits_q_old[2] <= 4;
+
+    soft_bits_i_old_delay1[0] <= 0;
+    soft_bits_i_old_delay1[1] <= 4;
+    soft_bits_i_old_delay1[2] <= 7;
+    soft_bits_q_old_delay1[0] <= 7;
+    soft_bits_q_old_delay1[1] <= 0;
+    soft_bits_q_old_delay1[2] <= 4;
+
+    soft_bits_i_old_delay2[0] <= 0;
+    soft_bits_i_old_delay2[1] <= 4;
+    soft_bits_i_old_delay2[2] <= 7;
+    soft_bits_q_old_delay2[0] <= 7;
+    soft_bits_q_old_delay2[1] <= 0;
+    soft_bits_q_old_delay2[2] <= 4;
+  end else if (enable) begin
+    soft_bits_i_old_delay1[0] <= soft_bits_i_old[0];
+    soft_bits_i_old_delay1[1] <= soft_bits_i_old[1];
+    soft_bits_i_old_delay1[2] <= soft_bits_i_old[2];
+    soft_bits_q_old_delay1[0] <= soft_bits_q_old[0];
+    soft_bits_q_old_delay1[1] <= soft_bits_q_old[1];
+    soft_bits_q_old_delay1[2] <= soft_bits_q_old[2];
+
+    soft_bits_i_old_delay2[0] <= soft_bits_i_old_delay1[0];
+    soft_bits_i_old_delay2[1] <= soft_bits_i_old_delay1[1];
+    soft_bits_i_old_delay2[2] <= soft_bits_i_old_delay1[2];
+    soft_bits_q_old_delay2[0] <= soft_bits_q_old_delay1[0];
+    soft_bits_q_old_delay2[1] <= soft_bits_q_old_delay1[1];
+    soft_bits_q_old_delay2[2] <= soft_bits_q_old_delay1[2];
+    case(mod)
+      BPSK: begin
+        // Inphase soft decoded bits
+        if(cons_i_delayed[15] == 0 && abs_cons_i >= BPSK_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < BPSK_SOFT_3 && abs_cons_i >= BPSK_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_1;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < BPSK_SOFT_2 && abs_cons_i >= BPSK_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_2;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < BPSK_SOFT_1 && abs_cons_i >= BPSK_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_3;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < BPSK_SOFT_1 && abs_cons_i >= BPSK_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_4;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < BPSK_SOFT_2 && abs_cons_i >= BPSK_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_5;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < BPSK_SOFT_3 && abs_cons_i >= BPSK_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_6;
+        // end else if(cons_i_delayed[15] == 1 && abs_cons_i < BPSK_SOFT_4 && abs_cons_i >= BPSK_SOFT_3)
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i >= BPSK_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_7;
+        end
+        // else
+        //   soft_bits[2:0] <= 3'b011;
+        soft_bits_i_old[1] <= SOFT_VALUE_4;
+        soft_bits_i_old[2] <= SOFT_VALUE_4;
+
+        // Quadrature soft decoded bits
+        soft_bits_q_old[0] <= SOFT_VALUE_4;
+        soft_bits_q_old[1] <= SOFT_VALUE_4;
+        soft_bits_q_old[2] <= SOFT_VALUE_4;
+
+        // // Inphase soft decoded bit positions
+        // if(abs_cons_i < BPSK_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b00;
+        // else
+        //   soft_bits_pos[1:0] <= 2'b11;
+
+        // // Quadrature soft decoded bit positions
+        // soft_bits_pos[3:2] <= 2'b11;
+      end
+      QPSK: begin
+        // Inphase soft decoded bits
+        if(cons_i_delayed[15] == 0 && abs_cons_i >= QPSK_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QPSK_SOFT_3 && abs_cons_i >= QPSK_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_1;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QPSK_SOFT_2 && abs_cons_i >= QPSK_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_2;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QPSK_SOFT_1 && abs_cons_i >= QPSK_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_3;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QPSK_SOFT_1 && abs_cons_i >= QPSK_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_4;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QPSK_SOFT_2 && abs_cons_i >= QPSK_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_5;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QPSK_SOFT_3 && abs_cons_i >= QPSK_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_6;
+        // end else if(cons_i_delayed[15] == 1 && abs_cons_i < QPSK_SOFT_4 && abs_cons_i >= QPSK_SOFT_3) begin
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i >= QPSK_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_7;
+        end
+        // else
+        //   soft_bits[2:0] <= 3'b011;
+        soft_bits_i_old[1] <= SOFT_VALUE_4;
+        soft_bits_i_old[2] <= SOFT_VALUE_4;
+
+        // Quadrature soft decoded bits
+        if(cons_q_delayed[15] == 0 && abs_cons_q >= QPSK_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QPSK_SOFT_3 && abs_cons_q >= QPSK_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_1;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QPSK_SOFT_2 && abs_cons_q >= QPSK_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_2;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QPSK_SOFT_1 && abs_cons_q >= QPSK_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_3;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QPSK_SOFT_1 && abs_cons_q >= QPSK_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_4;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QPSK_SOFT_2 && abs_cons_q >= QPSK_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_5;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QPSK_SOFT_3 && abs_cons_q >= QPSK_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_6;
+        // end else if(cons_q_delayed[15] == 1 && abs_cons_q < QPSK_SOFT_4 && abs_cons_q >= QPSK_SOFT_3) begin
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q >= QPSK_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_7;
+        end 
+        // else
+        //   soft_bits[5:3] <= 3'b011;
+        soft_bits_q_old[1] <= SOFT_VALUE_4;
+        soft_bits_q_old[2] <= SOFT_VALUE_4;
+
+        // // Inphase soft decoded bit positions
+        // if(abs_cons_i < QPSK_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b00;
+        // else
+        //   soft_bits_pos[1:0] <= 2'b11;
+
+        // // Quadrature soft decoded bit positions
+        // if(abs_cons_q < QPSK_SOFT_4)
+        //   soft_bits_pos[3:2] <= 2'b00;
+        // else
+        //   soft_bits_pos[3:2] <= 2'b11;
+      end
+      QAM_16: begin
+        // Inphase soft decoded bits
+        if(abs_cons_i < QAM_16_SOFT_12 && abs_cons_i >= QAM_16_SOFT_11) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+        end else if(abs_cons_i < QAM_16_SOFT_11 && abs_cons_i >= QAM_16_SOFT_10) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_6;
+        end else if(abs_cons_i < QAM_16_SOFT_10 && abs_cons_i >= QAM_16_SOFT_9) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_5;
+        end else if(abs_cons_i < QAM_16_SOFT_9  && abs_cons_i >= QAM_16_SOFT_8) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_4;
+        end else if(abs_cons_i < QAM_16_SOFT_8  && abs_cons_i >= QAM_16_SOFT_7) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_3;
+        end else if(abs_cons_i < QAM_16_SOFT_7  && abs_cons_i >= QAM_16_SOFT_6) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_2;
+        end else if(abs_cons_i < QAM_16_SOFT_6  && abs_cons_i >= QAM_16_SOFT_5) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_1;
+        end else if(abs_cons_i < QAM_16_SOFT_5  && abs_cons_i >= QAM_16_SOFT_4) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        //
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_16_SOFT_4 && abs_cons_i >= QAM_16_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_0;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_16_SOFT_3 && abs_cons_i >= QAM_16_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_1;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_16_SOFT_2 && abs_cons_i >= QAM_16_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_2;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_16_SOFT_1 && abs_cons_i >= QAM_16_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_3;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_16_SOFT_1 && abs_cons_i >= QAM_16_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_4;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_16_SOFT_2 && abs_cons_i >= QAM_16_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_5;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_16_SOFT_3 && abs_cons_i >= QAM_16_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_6;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_16_SOFT_4 && abs_cons_i >= QAM_16_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_7;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+        end 
+        // else
+        //   soft_bits[2:0] <= 3'b011;
+        soft_bits_i_old[2] <= SOFT_VALUE_4;
+
+        // Quadrature soft decoded bits
+        if(abs_cons_q < QAM_16_SOFT_12 && abs_cons_q >= QAM_16_SOFT_11) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+        end else if(abs_cons_q < QAM_16_SOFT_11 && abs_cons_q >= QAM_16_SOFT_10) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_6;
+        end else if(abs_cons_q < QAM_16_SOFT_10 && abs_cons_q >= QAM_16_SOFT_9) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_5;
+        end else if(abs_cons_q < QAM_16_SOFT_9  && abs_cons_q >= QAM_16_SOFT_8) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_4;
+        end else if(abs_cons_q < QAM_16_SOFT_8  && abs_cons_q >= QAM_16_SOFT_7) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_3;
+        end else if(abs_cons_q < QAM_16_SOFT_7  && abs_cons_q >= QAM_16_SOFT_6) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_2;
+        end else if(abs_cons_q < QAM_16_SOFT_6  && abs_cons_q >= QAM_16_SOFT_5) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_1;
+        end else if(abs_cons_q < QAM_16_SOFT_5  && abs_cons_q >= QAM_16_SOFT_4) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        //
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_16_SOFT_4 && abs_cons_q >= QAM_16_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_0;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_16_SOFT_3 && abs_cons_q >= QAM_16_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_1;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_16_SOFT_2 && abs_cons_q >= QAM_16_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_2;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_16_SOFT_1 && abs_cons_q >= QAM_16_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_3;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_16_SOFT_1 && abs_cons_q >= QAM_16_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_4;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_16_SOFT_2 && abs_cons_q >= QAM_16_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_5;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_16_SOFT_3 && abs_cons_q >= QAM_16_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_6;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_16_SOFT_4 && abs_cons_q >= QAM_16_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_7;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+        end 
+        // else
+        //   soft_bits[5:3] <= 3'b011;
+        soft_bits_q_old[2] <= SOFT_VALUE_4;
+
+        // // Inphase soft decoded bit positions
+        // if(abs_cons_i < QAM_16_SOFT_12 && abs_cons_i >= QAM_16_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b01;
+        // else if(abs_cons_i < QAM_16_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b00;
+        // else
+        //   soft_bits_pos[1:0] <= 2'b11;
+
+        // // Quadrature soft decoded bit positions
+        // if(abs_cons_q < QAM_16_SOFT_12 && abs_cons_q >= QAM_16_SOFT_4)
+        //   soft_bits_pos[3:2] <= 2'b01;
+        // else if(abs_cons_q < QAM_16_SOFT_4)
+        //   soft_bits_pos[3:2] <= 2'b00;
+        // else
+        //   soft_bits_pos[3:2] <= 2'b11;
+      end
+      QAM_64: begin
+        // Inphase soft decoded bits
+        if(abs_cons_i < QAM_64_SOFT_28 && abs_cons_i >= QAM_64_SOFT_27) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(abs_cons_i < QAM_64_SOFT_27 && abs_cons_i >= QAM_64_SOFT_26) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_6;
+        end else if(abs_cons_i < QAM_64_SOFT_26 && abs_cons_i >= QAM_64_SOFT_25) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_5;
+        end else if(abs_cons_i < QAM_64_SOFT_25 && abs_cons_i >= QAM_64_SOFT_24) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_4;
+        end else if(abs_cons_i < QAM_64_SOFT_24 && abs_cons_i >= QAM_64_SOFT_23) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_3;
+        end else if(abs_cons_i < QAM_64_SOFT_23 && abs_cons_i >= QAM_64_SOFT_22) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_2;
+        end else if(abs_cons_i < QAM_64_SOFT_22 && abs_cons_i >= QAM_64_SOFT_21) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_1;
+        end else if(abs_cons_i < QAM_64_SOFT_21 && abs_cons_i >= QAM_64_SOFT_20) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        // 
+        end else if(abs_cons_i < QAM_64_SOFT_20 && abs_cons_i >= QAM_64_SOFT_19) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_7;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_19 && abs_cons_i >= QAM_64_SOFT_18) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_6;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_18 && abs_cons_i >= QAM_64_SOFT_17) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_5;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_17 && abs_cons_i >= QAM_64_SOFT_16) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_4;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_16 && abs_cons_i >= QAM_64_SOFT_15) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_3;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_15 && abs_cons_i >= QAM_64_SOFT_14) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_2;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_14 && abs_cons_i >= QAM_64_SOFT_13) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_1;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_13 && abs_cons_i >= QAM_64_SOFT_12) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        //
+        end else if(abs_cons_i < QAM_64_SOFT_12 && abs_cons_i >= QAM_64_SOFT_11) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_i < QAM_64_SOFT_11 && abs_cons_i >= QAM_64_SOFT_10) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_1;
+        end else if(abs_cons_i < QAM_64_SOFT_10 && abs_cons_i >= QAM_64_SOFT_9) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_2;
+        end else if(abs_cons_i < QAM_64_SOFT_9  && abs_cons_i >= QAM_64_SOFT_8) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_3;
+        end else if(abs_cons_i < QAM_64_SOFT_8  && abs_cons_i >= QAM_64_SOFT_7) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_4;
+        end else if(abs_cons_i < QAM_64_SOFT_7  && abs_cons_i >= QAM_64_SOFT_6) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_5;
+        end else if(abs_cons_i < QAM_64_SOFT_6  && abs_cons_i >= QAM_64_SOFT_5) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_6;
+        end else if(abs_cons_i < QAM_64_SOFT_5  && abs_cons_i >= QAM_64_SOFT_4) begin
+          soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        //
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_64_SOFT_4 && abs_cons_i >= QAM_64_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_0;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_64_SOFT_3 && abs_cons_i >= QAM_64_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_1;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_64_SOFT_2 && abs_cons_i >= QAM_64_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_2;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 0 && abs_cons_i < QAM_64_SOFT_1 && abs_cons_i >= QAM_64_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_3;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_64_SOFT_1 && abs_cons_i >= QAM_64_SOFT_0) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_4;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_64_SOFT_2 && abs_cons_i >= QAM_64_SOFT_1) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_5;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_64_SOFT_3 && abs_cons_i >= QAM_64_SOFT_2) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_6;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end else if(cons_i_delayed[15] == 1 && abs_cons_i < QAM_64_SOFT_4 && abs_cons_i >= QAM_64_SOFT_3) begin
+          soft_bits_i_old[0] <= SOFT_VALUE_7;
+          soft_bits_i_old[1] <= SOFT_VALUE_0;
+          soft_bits_i_old[2] <= SOFT_VALUE_7;
+        end 
+        // else
+        //   soft_bits[2:0] <= 3'b011;
+
+        // Quadrature soft decoded bits
+        if(abs_cons_q < QAM_64_SOFT_28 && abs_cons_q >= QAM_64_SOFT_27) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(abs_cons_q < QAM_64_SOFT_27 && abs_cons_q >= QAM_64_SOFT_26) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_6;
+        end else if(abs_cons_q < QAM_64_SOFT_26 && abs_cons_q >= QAM_64_SOFT_25) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_5;
+        end else if(abs_cons_q < QAM_64_SOFT_25 && abs_cons_q >= QAM_64_SOFT_24) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_4;
+        end else if(abs_cons_q < QAM_64_SOFT_24 && abs_cons_q >= QAM_64_SOFT_23) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_3;
+        end else if(abs_cons_q < QAM_64_SOFT_23 && abs_cons_q >= QAM_64_SOFT_22) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_2;
+        end else if(abs_cons_q < QAM_64_SOFT_22 && abs_cons_q >= QAM_64_SOFT_21) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_1;
+        end else if(abs_cons_q < QAM_64_SOFT_21 && abs_cons_q >= QAM_64_SOFT_20) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        //
+        end else if(abs_cons_q < QAM_64_SOFT_20 && abs_cons_q >= QAM_64_SOFT_19) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_7;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_19 && abs_cons_q >= QAM_64_SOFT_18) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_6;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_18 && abs_cons_q >= QAM_64_SOFT_17) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_5;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_17 && abs_cons_q >= QAM_64_SOFT_16) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_4;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_16 && abs_cons_q >= QAM_64_SOFT_15) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_3;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_15 && abs_cons_q >= QAM_64_SOFT_14) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_2;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_14 && abs_cons_q >= QAM_64_SOFT_13) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_1;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_13 && abs_cons_q >= QAM_64_SOFT_12) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        //
+        end else if(abs_cons_q < QAM_64_SOFT_12 && abs_cons_q >= QAM_64_SOFT_11) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_0;
+        end else if(abs_cons_q < QAM_64_SOFT_11 && abs_cons_q >= QAM_64_SOFT_10) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_1;
+        end else if(abs_cons_q < QAM_64_SOFT_10 && abs_cons_q >= QAM_64_SOFT_9) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_2;
+        end else if(abs_cons_q < QAM_64_SOFT_9  && abs_cons_q >= QAM_64_SOFT_8) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_3;
+        end else if(abs_cons_q < QAM_64_SOFT_8  && abs_cons_q >= QAM_64_SOFT_7) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_4;
+        end else if(abs_cons_q < QAM_64_SOFT_7  && abs_cons_q >= QAM_64_SOFT_6) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_5;
+        end else if(abs_cons_q < QAM_64_SOFT_6  && abs_cons_q >= QAM_64_SOFT_5) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_6;
+        end else if(abs_cons_q < QAM_64_SOFT_5  && abs_cons_q >= QAM_64_SOFT_4) begin
+          soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        //
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_64_SOFT_4 && abs_cons_q >= QAM_64_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_0;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_64_SOFT_3 && abs_cons_q >= QAM_64_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_1;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_64_SOFT_2 && abs_cons_q >= QAM_64_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_2;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 0 && abs_cons_q < QAM_64_SOFT_1 && abs_cons_q >= QAM_64_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_3;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_64_SOFT_1 && abs_cons_q >= QAM_64_SOFT_0) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_4;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_64_SOFT_2 && abs_cons_q >= QAM_64_SOFT_1) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_5;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_64_SOFT_3 && abs_cons_q >= QAM_64_SOFT_2) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_6;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end else if(cons_q_delayed[15] == 1 && abs_cons_q < QAM_64_SOFT_4 && abs_cons_q >= QAM_64_SOFT_3) begin
+          soft_bits_q_old[0] <= SOFT_VALUE_7;
+          soft_bits_q_old[1] <= SOFT_VALUE_0;
+          soft_bits_q_old[2] <= SOFT_VALUE_7;
+        end 
+        // else
+        //   soft_bits[5:3] <= 3'b011;
+
+        // // Inphase soft decoded bit positions
+        // if(abs_cons_i < QAM_64_SOFT_28 && abs_cons_i >= QAM_64_SOFT_20)
+        //   soft_bits_pos[1:0] <= 2'b10;
+        // else if(abs_cons_i < QAM_64_SOFT_20 && abs_cons_i >= QAM_64_SOFT_12)
+        //   soft_bits_pos[1:0] <= 2'b01;
+        // else if(abs_cons_i < QAM_64_SOFT_12 && abs_cons_i >= QAM_64_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b10;
+        // else if(abs_cons_i < QAM_64_SOFT_4)
+        //   soft_bits_pos[1:0] <= 2'b00;
+        // else
+        //   soft_bits_pos[1:0] <= 2'b11;
+
+        // // Quadrature soft decoded bit positions
+        // if(abs_cons_q < QAM_64_SOFT_28 && abs_cons_q >= QAM_64_SOFT_20)
+        //   soft_bits_pos[3:2] <= 2'b10;
+        // else if(abs_cons_q < QAM_64_SOFT_20 && abs_cons_q >= QAM_64_SOFT_12)
+        //   soft_bits_pos[3:2] <= 2'b01;
+        // else if(abs_cons_q < QAM_64_SOFT_12 && abs_cons_q >= QAM_64_SOFT_4)
+        //   soft_bits_pos[3:2] <= 2'b10;
+        // else if(abs_cons_q < QAM_64_SOFT_4)
+        //   soft_bits_pos[3:2] <= 2'b00;
+        // else
+        //   soft_bits_pos[3:2] <= 2'b11;
+      end
+    endcase
+  end
+end
+
+`else
+
+always @(posedge clock) begin
+  soft_bits_i_old_delay2[0] <= 0;
+  soft_bits_i_old_delay2[1] <= 0;
+  soft_bits_i_old_delay2[2] <= 0;
+  soft_bits_q_old_delay2[0] <= 0;
+  soft_bits_q_old_delay2[1] <= 0;
+  soft_bits_q_old_delay2[2] <= 0;
+end
+
+`endif
 
 endmodule
