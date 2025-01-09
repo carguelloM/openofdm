@@ -11,6 +11,7 @@ module ofdm_decoder
   input [31:0] sample_in,
   input sample_in_strobe,
   input soft_decoding,
+  input soft_bits_method,
 
   // decode instructions
   input [7:0] rate,
@@ -154,6 +155,8 @@ demodulate demod_inst (
   .cons_i(input_i),
   .cons_q(input_q),
   .input_strobe(sample_in_strobe),
+
+  .soft_bits_method(soft_bits_method),
 
   .csi_square_over_noise_var_read_addr(csi_square_over_noise_var_read_addr),
   .csi_square_over_noise_var_for_llr(csi_square_over_noise_var_for_llr),

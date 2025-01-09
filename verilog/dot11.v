@@ -30,6 +30,7 @@ module dot11 (
     input [31:0] sample_in,
     input sample_in_strobe,
     input soft_decoding,
+    input soft_bits_method, // 0: default LLR; 1: old soft_bits method -- hard partition
     input wire force_ht_smoothing,
     input wire disable_all_smoothing,
     input [3:0] fft_win_shift, 
@@ -496,6 +497,7 @@ ofdm_decoder ofdm_decoder_inst (
     .sample_in({ofdm_in_i, ofdm_in_q}),
     .sample_in_strobe(ofdm_in_stb),
     .soft_decoding(soft_decoding),
+    .soft_bits_method(soft_bits_method),
 
     .do_descramble(do_descramble),
     .num_bits_to_decode(num_bits_to_decode),

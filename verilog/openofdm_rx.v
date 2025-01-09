@@ -223,6 +223,7 @@ dot11 # (
   .sample_in(sample_in),
   .sample_in_strobe(sample_in_strobe),
   .soft_decoding(slv_reg4[0]),
+  .soft_bits_method(slv_reg4[4]), // 0: default LLR; 1: old soft_bits method -- hard partition
   .force_ht_smoothing(slv_reg1[0]),
   .disable_all_smoothing(slv_reg1[4]),
 
