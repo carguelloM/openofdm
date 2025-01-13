@@ -732,6 +732,7 @@ dot11 dot11_inst (
   .sample_in(sample_in),
   .sample_in_strobe(sample_in_strobe),
   .soft_decoding(1'b1),
+  .soft_bits_method(1'b0),
   .force_ht_smoothing(1'b1),
   .disable_all_smoothing(1'b0),
   .fft_win_shift(4'd4),
