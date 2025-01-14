@@ -27,8 +27,8 @@ module dot11 (
     // INPUT: RSSI
     input signed [10:0] rssi_half_db,
     // INPUT: I/Q sample
-    input [31:0] sample_in,
-    input sample_in_strobe,
+    `DEBUG_PREFIX input [31:0] sample_in,
+    `DEBUG_PREFIX input sample_in_strobe,
     input soft_decoding,
     input soft_bits_method, // 0: default LLR; 1: old soft_bits method -- hard partition
     input wire force_ht_smoothing,
