@@ -39,6 +39,7 @@ reg input_strobe_reg1;
 always @(posedge clock) begin
     if (reset) begin
         mag <= 0;
+        mag_stb <= 0;
         abs_i <= 0;
         abs_q <= 0;
         max <= 0;
