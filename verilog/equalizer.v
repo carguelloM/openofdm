@@ -406,6 +406,7 @@ divider norm_q_inst (
 
 always @(posedge clock) begin
     if (reset|reset_internal) begin
+        sample_in_strobe_dly <= sample_in_strobe;
         sample_out_strobe <= 0;
         lts_raddr <= 0;
         lts_waddr <= 0;
