@@ -124,11 +124,11 @@ module signal_watchdog
   assign event4 = (sig_valid && signal_len>max_signal_len_th);
   assign receiver_rst = ( enable & power_trigger & ( event0 | event1 | event2 | event3 | event4 ) );
 
-	assign counter0_rst = (slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==0);//slv_reg30 wr and event 0 is selected
-	assign counter1_rst = (slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==1);//slv_reg30 wr and event 1 is selected
-	assign counter2_rst = (slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==2);//slv_reg30 wr and event 2 is selected
-	assign counter3_rst = (slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==3);//slv_reg30 wr and event 3 is selected
-	assign counter4_rst = (slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==4);//slv_reg30 wr and event 4 is selected
+	assign counter0_rst = ((~rstn)|(slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==0));//slv_reg30 wr and event 0 is selected
+	assign counter1_rst = ((~rstn)|(slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==1));//slv_reg30 wr and event 1 is selected
+	assign counter2_rst = ((~rstn)|(slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==2));//slv_reg30 wr and event 2 is selected
+	assign counter3_rst = ((~rstn)|(slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==3));//slv_reg30 wr and event 3 is selected
+	assign counter4_rst = ((~rstn)|(slv_reg_wren_signal==1 && axi_awaddr_core==30 && event_selector==4));//slv_reg30 wr and event 4 is selected
 
   // event selector
   always @* begin
