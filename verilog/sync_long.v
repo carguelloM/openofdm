@@ -332,7 +332,7 @@ initial begin
     next_phase_correction <= 0;
 end
 
-integer i;
+// integer i;
 integer j;
 always @(posedge clock) begin
     if (reset) begin
