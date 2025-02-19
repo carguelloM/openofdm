@@ -349,6 +349,9 @@ always @(posedge clock) begin
         phase_out_neg <= 0;
         phase_offset_neg <= 0;
         fft_din_data_tlast <= 1'b0;
+        sample_delayed_conj_stb <= sample_delayed_stb;
+        sample_delayed_conj[31:16] <= sample_delayed[31:16];
+        sample_delayed_conj[15:0] <= ~sample_delayed[15:0]+1; 
     end else if (enable) begin
         reset_delay4 <= reset_delay3;
         reset_delay3 <= reset_delay2;
