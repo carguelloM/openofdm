@@ -176,7 +176,6 @@ wire [31:0] prod_i;
 wire [31:0] prod_q;
 wire [31:0] prod_i_scaled = prod_i<<(`CONS_SCALE_SHIFT+1);
 wire [31:0] prod_q_scaled = prod_q<<(`CONS_SCALE_SHIFT+1); // +1 to fix the bug threshold for demodulate.v
-wire prod_stb;
 
 reg signed [15:0] lts_reg1_i, lts_reg2_i, lts_reg3_i;
 reg signed [15:0] lts_reg1_q, lts_reg2_q, lts_reg3_q;
