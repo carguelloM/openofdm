@@ -6,6 +6,8 @@ module equalizer
     input enable,
     input reset,
 
+    input reset_dot11,
+
     input [31:0] sample_in,
     input sample_in_strobe,
     input ht_next,
@@ -271,6 +273,7 @@ end
 
 dpram #(.DATA_WIDTH(32), .ADDRESS_WIDTH(6)) lts_inst (
     .clock(clock),
+    .reset(reset_dot11),
     .enable_a(1),
     .write_enable(lts_in_stb),
     .write_address(lts_waddr),
@@ -310,6 +313,7 @@ calc_mean lts_q_inst (
 
 dpram  #(.DATA_WIDTH(32), .ADDRESS_WIDTH(6)) in_buf_inst (
     .clock(clock),
+    .reset(reset_dot11),
     .enable_a(1),
     .write_enable(sample_in_strobe),
     .write_address(in_waddr),

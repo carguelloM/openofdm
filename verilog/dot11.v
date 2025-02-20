@@ -394,7 +394,9 @@ sync_long sync_long_inst (
     .clock(clock),
     .reset(reset | sync_long_reset),
     .enable(enable & sync_long_enable),
-    
+
+    .reset_dot11(reset),
+
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
     //.phase_offset_input(phase_offset),
@@ -447,6 +449,8 @@ equalizer equalizer_inst (
     .clock(clock),
     .reset(reset | equalizer_reset),
     .enable(enable & equalizer_enable),
+
+    .reset_dot11(reset),
 
     .sample_in(rotafft_out),
     .sample_in_strobe(rotafft_stb && !((state==S_HT_SIGNAL || state==S_CHECK_HT_SIG_CRC) && num_ofdm_symbol==6)),

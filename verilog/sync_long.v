@@ -11,6 +11,8 @@ module sync_long (
     input reset,
     input enable,
 
+    input reset_dot11,
+
     input [31:0] sample_in,
     input sample_in_strobe,
     input short_gi,
@@ -248,6 +250,7 @@ wire m_axis_data_tlast;
 
 dpram  #(.DATA_WIDTH(32), .ADDRESS_WIDTH(IN_BUF_LEN_SHIFT)) in_buf (
     .clock(clock),
+    .reset(reset_dot11),
     .enable_a(1),
     .write_enable(sample_in_strobe),
     .write_address(in_waddr),

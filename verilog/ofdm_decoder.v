@@ -136,6 +136,7 @@ div_gen_csi_over_nova div_gen_csi_over_nova_inst (
 );
 dpram #(.DATA_WIDTH(34), .ADDRESS_WIDTH(6)) lts_inst (
   .clock(clock),
+  .reset(reset_dot11),
   .enable_a(1),
   .write_enable(csi_square_over_noise_var_write_enable),
   .write_address(csi_square_over_noise_var_write_addr),
@@ -170,6 +171,8 @@ deinterleave deinterleave_inst (
   .clock(clock),
   .reset(reset),
   .enable(enable),
+
+  .reset_dot11(reset_dot11),
 
   .rate(rate),
   .in_bits(demod_out),

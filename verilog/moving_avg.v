@@ -33,6 +33,7 @@ reg full;
 
 dpram  #(.DATA_WIDTH(DATA_WIDTH), .ADDRESS_WIDTH(WINDOW_SHIFT)) delay_line (
     .clock(clock),
+    .reset(reset),
     .enable_a(1),
     .write_enable(input_strobe),
     .write_address(addr),

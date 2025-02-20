@@ -7,6 +7,8 @@ module deinterleave
     input reset,
     input enable,
 
+    input reset_dot11,
+
     input [7:0] rate,
     input [5:0] in_bits,
     input [17:0] soft_in_bits,
@@ -128,6 +130,7 @@ reg ht_delayed;
 
 dpram #(.DATA_WIDTH(24), .ADDRESS_WIDTH(6)) ram_inst (
     .clock(clock),
+    .reset(reset_dot11),
     .enable_a(1),
     .write_enable(input_strobe),
     .write_address(addra),
