@@ -365,7 +365,7 @@ always @(posedge clock) begin
         sample_delayed_conj[15:0] <= ~sample_delayed[15:0]+1;   
         phase_out_neg <= ~phase_out + 1;
         phase_offset_neg <= {{6{phase_out[15]}}, phase_out[15:6]};
-        if (sample_in_strobe && state != S_SKIPPING_TAIL && state != S_SKIPPING_CP) begin
+        if (sample_in_strobe && state != S_SKIPPING_TAIL) begin
             in_waddr <= in_waddr + 1;
             num_input_produced <= num_input_produced + 1;
         end
@@ -426,8 +426,8 @@ always @(posedge clock) begin
                         ltf_phase_offset_int <= ~phase_offset_neg + 1;
                     state <= S_FFT;
                     long_preamble_detected <= 1;
-                    in_raddr <= addr1 - 32; // + NUM_ADD_SP_TO_SKIP; 
-                    num_input_consumed <= addr1 - 32; //+ NUM_ADD_SP_TO_SKIP; 
+                    in_raddr <= (addr1+NUM_ADD_SP_TO_SKIP) - 32;
+                    num_input_consumed <= (addr1+NUM_ADD_SP_TO_SKIP) - 32;
                 end else if (metric_stb) begin
                     num_sample <= num_sample + 1;
                 end
