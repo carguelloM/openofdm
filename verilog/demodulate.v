@@ -837,7 +837,8 @@ always @(posedge clock) begin
       end
       QAM_16: begin
         // Inphase soft decoded bits
-        if(abs_cons_i < QAM_16_SOFT_12 && abs_cons_i >= QAM_16_SOFT_11) begin
+        // if(abs_cons_i < QAM_16_SOFT_12 && abs_cons_i >= QAM_16_SOFT_11) begin
+        if(abs_cons_i >= QAM_16_SOFT_11) begin
           soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
           soft_bits_i_old[1] <= SOFT_VALUE_7;
         end else if(abs_cons_i < QAM_16_SOFT_11 && abs_cons_i >= QAM_16_SOFT_10) begin
@@ -892,7 +893,8 @@ always @(posedge clock) begin
         soft_bits_i_old[2] <= SOFT_VALUE_4;
 
         // Quadrature soft decoded bits
-        if(abs_cons_q < QAM_16_SOFT_12 && abs_cons_q >= QAM_16_SOFT_11) begin
+        // if(abs_cons_q < QAM_16_SOFT_12 && abs_cons_q >= QAM_16_SOFT_11) begin
+        if(abs_cons_q >= QAM_16_SOFT_11) begin
           soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
           soft_bits_q_old[1] <= SOFT_VALUE_7;
         end else if(abs_cons_q < QAM_16_SOFT_11 && abs_cons_q >= QAM_16_SOFT_10) begin
@@ -964,7 +966,8 @@ always @(posedge clock) begin
       end
       QAM_64: begin
         // Inphase soft decoded bits
-        if(abs_cons_i < QAM_64_SOFT_28 && abs_cons_i >= QAM_64_SOFT_27) begin
+        // if(abs_cons_i < QAM_64_SOFT_28 && abs_cons_i >= QAM_64_SOFT_27) begin
+        if(abs_cons_i >= QAM_64_SOFT_27) begin
           soft_bits_i_old[0] <= ( cons_i_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
           soft_bits_i_old[1] <= SOFT_VALUE_7;
           soft_bits_i_old[2] <= SOFT_VALUE_7;
@@ -1100,7 +1103,8 @@ always @(posedge clock) begin
         //   soft_bits[2:0] <= 3'b011;
 
         // Quadrature soft decoded bits
-        if(abs_cons_q < QAM_64_SOFT_28 && abs_cons_q >= QAM_64_SOFT_27) begin
+        // if(abs_cons_q < QAM_64_SOFT_28 && abs_cons_q >= QAM_64_SOFT_27) begin
+        if(abs_cons_q >= QAM_64_SOFT_27) begin
           soft_bits_q_old[0] <= ( cons_q_delayed[15]? SOFT_VALUE_7 : SOFT_VALUE_0 );
           soft_bits_q_old[1] <= SOFT_VALUE_7;
           soft_bits_q_old[2] <= SOFT_VALUE_7;
