@@ -62,6 +62,13 @@ if {$NUM_CLK_PER_US == 100} {
 
 puts $fd "`define BETTER_SENSITIVITY"
 
+# fpga_size_flag is set by parse_board_name.tcl
+# If it is not SMALL_FPGA, HAS_OLD_SOFT_BITS_METHOD will be defined to also include old hard patition based soft bits
+# Due to tsn branch has extra logic, the SMALL_FPGA can not afford this extra old method in FPGA
+if {$fpga_size_flag == 1} {
+  puts $fd "`define HAS_OLD_SOFT_BITS_METHOD 1"
+}
+
 if {$ARGUMENT3 eq ""} {
   puts $fd "`define SAMPLE_FILE \"../../../../../testing_inputs/simulated/ht_mcs7_gi1_aggr0_len14_pre100_post200_openwifi.txt\""
   # puts $fd "`define FC_IN_FILE \"../../../../../testing_inputs/simulated/ht_mcs7_gi1_aggr0_len14_pre100_post200_openwifi_Fc_input.txt\""
