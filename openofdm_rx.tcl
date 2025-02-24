@@ -98,6 +98,7 @@ if {$ARGUMENT7 eq ""} {
 } else {
   puts $fd "`define $MODULE_NAME\_$ARGUMENT7"
 }
+puts $fd "`define $BOARD_NAME"
 close $fd
 #-----end of process arguments (if exist)-------
 
