@@ -54,7 +54,7 @@ module openofdm_rx #
   // for side channel
   output wire [31:0] csi,
   output wire csi_valid,
-  output wire [31:0] phase_offset_taken,
+  output wire signed [31:0] phase_offset_taken,
   output wire [31:0] equalizer,
   output wire equalizer_valid,
   output wire ofdm_symbol_eq_out_pulse,
