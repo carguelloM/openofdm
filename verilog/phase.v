@@ -13,7 +13,7 @@ module phase
     input signed [DATA_WIDTH-1:0] in_q,
     input input_strobe,
 
-    // [-pi, pi) scaled up by 512
+    // [-pi, pi) scaled up by ATAN_LUT_SCALE
     output reg signed [15:0] phase,
     output output_strobe
 );
@@ -27,8 +27,8 @@ reg [DATA_WIDTH-1:0] max;
 reg [DATA_WIDTH-1:0] min;
 wire [DATA_WIDTH-1:0] dividend;
 wire [DATA_WIDTH-`ATAN_LUT_LEN_SHIFT-1:0] divisor;
-assign dividend = (max > 4194304) ? min                                   : {min[DATA_WIDTH-`ATAN_LUT_LEN_SHIFT-1:0], {`ATAN_LUT_LEN_SHIFT{1'b0}}};
-assign divisor  = (max > 4194304) ? max[DATA_WIDTH-1:`ATAN_LUT_LEN_SHIFT] :  max[DATA_WIDTH-`ATAN_LUT_LEN_SHIFT-1:0];
+assign dividend = (max > MAX_V) ? min                                   : {min[DATA_WIDTH-`ATAN_LUT_LEN_SHIFT-1:0], {`ATAN_LUT_LEN_SHIFT{1'b0}}};
+assign divisor  = (max > MAX_V) ? max[DATA_WIDTH-1:`ATAN_LUT_LEN_SHIFT] :  max[DATA_WIDTH-`ATAN_LUT_LEN_SHIFT-1:0];
 
 wire div_in_stb;
 
@@ -38,7 +38,7 @@ wire div_out_stb;
 wire [`ATAN_LUT_LEN_SHIFT-1:0] atan_addr;
 wire [`ATAN_LUT_SCALE_SHIFT-1:0] atan_data;
 
-assign atan_addr = (quotient>511?511:quotient[`ATAN_LUT_LEN_SHIFT-1:0]);
+assign atan_addr = (quotient > ATAN_LUT_SCALE-1 ? ATAN_LUT_SCALE-1 : quotient[`ATAN_LUT_LEN_SHIFT-1:0]);
 wire signed [`ATAN_LUT_SCALE_SHIFT:0] _phase = {1'b0, atan_data};
 
 reg [2:0] quadrant;

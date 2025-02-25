@@ -8,6 +8,8 @@ localparam DOUBLE_PI =      PI<<1;
 localparam PI_2 =           PI>>1;
 localparam PI_4 =           PI>>2;
 localparam PI_3_4 =         PI_2 + PI_4;
+localparam MAX_V =          1 << (31 - `ATAN_LUT_SCALE_SHIFT);
+localparam ATAN_LUT_SCALE = 1 << (`ATAN_LUT_SCALE_SHIFT);
 
 
 //////////////////////////////////////////////////////////////////////////
