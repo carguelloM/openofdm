@@ -41,7 +41,7 @@ else
     exit 1
 fi
 
-source $XILINX_DIR/Vivado/2021.1/settings64.sh
+source $XILINX_DIR/Vivado/2022.2/settings64.sh
 
 ARG1=""
 ARG2=""
