@@ -20,8 +20,11 @@ module ofdm_decoder
 
   input [31:0] csi,
   input csi_valid,
-  input [31:0] noiseVar,
-  input noiseVar_valid,
+  input [31:0] noise_var,
+  input noise_var_valid,
+
+  output reg bit_in,
+  output reg bit_in_stb,
 
   output [5:0] demod_out,
   output [17:0] demod_soft_bits,
@@ -43,7 +46,7 @@ module ofdm_decoder
 `include "common_params.v"
 
 reg conv_in_stb, conv_in_stb_dly, do_descramble_dly;
-wire conv_in_stb_auto_zero_while_not_enable;
+wire conv_in_stb_auto_zero_while_not_enable; // to avoid conv decoder continue working during this module disable
 reg [2:0] conv_in0, conv_in0_dly;
 reg [2:0] conv_in1, conv_in1_dly;
 reg [1:0] conv_erase, conv_erase_dly;
@@ -51,7 +54,7 @@ reg [1:0] conv_erase, conv_erase_dly;
 wire [15:0] input_i = sample_in[31:16];
 wire [15:0] input_q = sample_in[15:0];
 
-wire [(31-7):0] noiseVar_new; //25bit. Matlab: noise_var_new = floor(noiseVar/128);
+wire [(31-7):0] noise_var_new; //25bit. Matlab: noise_var_new = floor(noise_var/128);
 wire        csi_square_valid;
 wire [31:0] csi_square;
 wire [31:0] csi_square_raw;
@@ -79,18 +82,16 @@ wire [5:0] deinterleave_out;
 wire deinterleave_out_strobe;
 wire [1:0] erase;
 
-wire m_axis_data_tvalid ;
+wire m_axis_data_tvalid;
 
 reg [3:0] skip_bit;
-reg bit_in;
-reg bit_in_stb;
 wire bit_in_stb_auto_zero_while_not_enable;
 
 reg [19:0] deinter_out_count; // bitwidth same as num_bits_to_decode
 //reg flush;
 
-assign noiseVar_new = (noiseVar[31:7] == 0? 1 : noiseVar[31:7]); //25bit. Matlab: noise_var_new = floor(noiseVar/128);
-// noise_var_new = floor(noiseVar/128);
+assign noise_var_new = (noise_var[31:7] == 0? 1 : noise_var[31:7]); //25bit. Matlab: noise_var_new = floor(noise_var/128);
+// noise_var_new = floor(noise_var/128);
 // if noise_var_new == 0
 //   noise_var_new = 1;
 // end
@@ -109,10 +110,10 @@ assign deinterleave_erase_out_strobe = deinterleave_out_strobe;
 assign csi_square_over_noise_var_for_write = csi_square_over_noise_var;
 assign csi_square_over_noise_var_write_enable = csi_square_over_noise_var_valid;
 
-assign conv_in_stb_auto_zero_while_not_enable = (enable? conv_in_stb : 0);
-assign bit_in_stb_auto_zero_while_not_enable = (enable? bit_in_stb : 0);
+assign conv_in_stb_auto_zero_while_not_enable = (enable? conv_in_stb : 0); // avoid stay high during disable
+assign bit_in_stb_auto_zero_while_not_enable = (enable? bit_in_stb : 0); // avoid stay high during disable
 
-// calculate csi_square/noiseVar and store for further steps
+// calculate csi_square/noise_var and store for further steps
 // partially from Colvin's csi_calc.v
 complex_to_mag_sq csi_square_inst (
   .clock(clock),
@@ -128,7 +129,7 @@ complex_to_mag_sq csi_square_inst (
 div_gen_csi_over_nova div_gen_csi_over_nova_inst (
   .aclk(clock),
   .s_axis_divisor_tvalid(csi_square_valid),
-  .s_axis_divisor_tdata(noiseVar_new), //25bit
+  .s_axis_divisor_tdata(noise_var_new), //25bit
   .s_axis_dividend_tvalid(csi_square_valid),
   .s_axis_dividend_tdata(csi_square_scaled), //34bit
   .m_axis_dout_tvalid(csi_square_over_noise_var_valid),
@@ -197,7 +198,7 @@ viterbi_v7_0 viterbi_inst (
 );
 */
 //reg [4:0] idle_wire_5bit ;
-//wire [6:0] idle_wire_7bit ; 
+wire [6:0] idle_wire_7bit; 
 viterbi_v7_0 viterbi_inst (
   .aclk(clock),                              // input wire aclk
   .aresetn(~vit_clr),                        // input wire aresetn
