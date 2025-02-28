@@ -74,8 +74,7 @@ module dot11 (
     `DEBUG_PREFIX output [31:0] sync_long_metric,
     `DEBUG_PREFIX output sync_long_metric_stb,
     `DEBUG_PREFIX output long_preamble_detected,
-    `DEBUG_PREFIX output [31:0] sync_long_out,
-    `DEBUG_PREFIX output sync_long_out_strobe,
+
     `DEBUG_PREFIX input  phase_offset_override_en,
     `DEBUG_PREFIX input  signed [15:0] phase_offset_override_val,
     `DEBUG_PREFIX output wire signed [15:0] phase_offset_taken,
@@ -84,7 +83,6 @@ module dot11 (
     // equalizer
     `DEBUG_PREFIX output [31:0] equalizer_out,
     `DEBUG_PREFIX output equalizer_out_strobe,
-    `DEBUG_PREFIX output [3:0] equalizer_state,
     `DEBUG_PREFIX output wire ofdm_symbol_eq_out_pulse,
 
     // legacy signal info
@@ -153,7 +151,10 @@ end
 ////////////////////////////////////////////////////////////////////////////////
 // extra info output to ease side info and viterbi state monitor
 ////////////////////////////////////////////////////////////////////////////////
-`DEBUG_PREFIX reg  [3:0] equalizer_state_reg;
+`DEBUG_PREFIX wire [31:0] sync_long_out;
+`DEBUG_PREFIX wire        sync_long_out_strobe;
+`DEBUG_PREFIX wire [3:0]  equalizer_state;
+`DEBUG_PREFIX reg  [3:0]  equalizer_state_reg;
 
 assign ofdm_symbol_eq_out_pulse = (equalizer_state==3 && equalizer_state_reg==5);
 
@@ -208,12 +209,6 @@ rot_lut rot_lut_inst (
 ////////////////////////////////////////////////////////////////////////////////
 // Shared phase module for sync_short and equalizer
 ////////////////////////////////////////////////////////////////////////////////
-//wire [31:0] sync_short_phase_in_i;
-//wire [31:0] sync_short_phase_in_q;
-//wire sync_short_phase_in_stb;
-//wire [15:0] sync_short_phase_out;
-//wire sync_short_phase_out_stb;
-
 wire [31:0] sync_long_phase_in_i;
 wire [31:0] sync_long_phase_in_q;
 wire sync_long_phase_in_stb;
@@ -226,18 +221,17 @@ wire eq_phase_in_stb;
 wire [15:0] eq_phase_out;
 wire eq_phase_out_stb;
 
-wire[31:0] phase_in_i = state == S_SYNC_LONG?
-    sync_long_phase_in_i: eq_phase_in_i;
-wire[31:0] phase_in_q = state == S_SYNC_LONG?
-    sync_long_phase_in_q: eq_phase_in_q;
-wire phase_in_stb = state == S_SYNC_LONG?
-    sync_long_phase_in_stb: eq_phase_in_stb;
+wire [31:0] phase_in_i;
+wire [31:0] phase_in_q;
+wire phase_in_stb;
+
+assign phase_in_i = state == S_SYNC_LONG? sync_long_phase_in_i : eq_phase_in_i;
+assign phase_in_q = state == S_SYNC_LONG ? sync_long_phase_in_q : eq_phase_in_q;
+assign phase_in_stb = state == S_SYNC_LONG ? sync_long_phase_in_stb : eq_phase_in_stb;
 
 wire [15:0] phase_out;
 wire phase_out_stb;
 
-assign sync_short_phase_out = phase_out;
-assign sync_short_phase_out_stb = phase_out_stb;
 assign sync_long_phase_out_stb = phase_out_stb;
 assign sync_long_phase_out = phase_out;
 assign eq_phase_out = phase_out;
@@ -259,7 +253,6 @@ phase phase_inst (
 
 reg sync_short_reset;
 reg sync_long_reset;
-// wire sync_short_enable = state == S_SYNC_SHORT;
 wire sync_short_enable = 1;
 reg sync_long_enable;
 wire [15:0] num_ofdm_symbol;
@@ -326,7 +319,7 @@ assign ht_sgi = ht_sig2[7];
 assign ht_num_ext = ht_sig2[9:8];
 
 wire ht_rsvd = ht_sig2[2];
-wire [7:0] crc = ht_sig2[17:10];
+wire [7:0] ht_crc = ht_sig2[17:10];
 wire [5:0] ht_sig_tail = ht_sig2[23:18];
 
 reg [15:0] pkt_len_rem;
@@ -358,14 +351,9 @@ assign byte_reversed[7] = byte_out[0];
 reg [15:0] sync_long_out_count;
 
 // signals for aLLR demapper
-wire s_noiseEst_valid;
-wire s_csi_data_sbc_valid;
-wire signed [31:0] s_noiseEst;
-wire s_vit_bit_demap, s_vit_bit_demap_stb;
-wire s_byte_out_aLLRdemap_stb;
-wire [7:0] s_byte_out_aLLRdemap;
-wire [7:0] s_byte_out_legacy;
-wire s_byte_out_legacy_stb;
+wire noise_var_valid;
+wire csi_data_valid;
+wire signed [31:0] noise_var;
 
 sync_short sync_short_inst (
     .clock(clock),
@@ -378,16 +366,8 @@ sync_short sync_short_inst (
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
 
-//    .phase_in_i(sync_short_phase_in_i),
-//    .phase_in_q(sync_short_phase_in_q),
-//    .phase_in_stb(sync_short_phase_in_stb),
-
-//    .phase_out(sync_short_phase_out),
-//    .phase_out_stb(sync_short_phase_out_stb),
-
     .demod_is_ongoing(demod_is_ongoing),
     .short_preamble_detected(short_preamble_detected)
-    //.phase_offset(phase_offset)
 );
 
 sync_long sync_long_inst (
@@ -399,7 +379,6 @@ sync_long sync_long_inst (
 
     .sample_in(sample_in),
     .sample_in_strobe(sample_in_strobe),
-    //.phase_offset_input(phase_offset),
     .ltf_phase_offset(phase_offset),
     .short_gi(short_gi),
     .fft_win_shift(fft_win_shift),
@@ -476,9 +455,9 @@ equalizer equalizer_inst (
 
     .csi(csi),
     .csi_valid(csi_valid),
-    .o_csi_data_sbc_valid(s_csi_data_sbc_valid),
-    .o_noiseEst_stb(s_noiseEst_valid),
-    .o_noiseEst(s_noiseEst)
+    .o_csi_data_sbc_valid(csi_data_valid),
+    .o_noiseEst_stb(noise_var_valid),
+    .o_noiseEst(noise_var)
 );
 
 delayT #(.DATA_WIDTH(33), .DELAY(17)) eq_delay_inst (
@@ -508,9 +487,9 @@ ofdm_decoder ofdm_decoder_inst (
     .rate(pkt_rate),
 
     .csi(csi),
-    .csi_valid(s_csi_data_sbc_valid),
-    .noiseVar(s_noiseEst),
-    .noiseVar_valid(s_noiseEst_valid),
+    .csi_valid(csi_data_valid),
+    .noise_var(noise_var),
+    .noise_var_valid(noise_var_valid),
 
     .byte_out(byte_out),
     .byte_out_strobe(byte_out_strobe),
@@ -650,10 +629,10 @@ always @(posedge clock) begin
                 demod_is_ongoing <= 0;
                 sync_long_enable <= 0;
                 equalizer_enable <= 0;
-                ofdm_in_stb <= 0;
+                ofdm_in_stb <= 0; // to avoid it stay high
                 ofdm_enable <= 0;
                 ofdm_reset <= 0;
-                do_descramble <= 0;
+                do_descramble <= 0; // to avoid it stay high
                 pkt_len_total <= 16'hffff;
                 ht_sig1 <= 0;
                 ht_sig2 <= 0;
@@ -701,7 +680,7 @@ always @(posedge clock) begin
                     sync_short_reset <= 1;
                 end
 
-                // Maybe not necessary to check power_trigger in many states, which causes high fan out
+                // Not necessary to check power_trigger in many states, which causes high fan out
                 // if (~power_trigger) begin
                 //     state <= S_WAIT_POWER_TRIGGER;
                 //     sync_short_reset <= 1;
@@ -764,7 +743,7 @@ always @(posedge clock) begin
             end
 
             S_CHECK_SIGNAL: begin
-                ofdm_in_stb <= 0;
+                ofdm_in_stb <= 0; // make it low in time
                 if (~legacy_sig_parity_ok) begin
                     pkt_header_valid_strobe <= 1;
                     status_code <= E_PARITY_FAIL;
@@ -876,7 +855,7 @@ always @(posedge clock) begin
                             "fec = %d, ", ht_fec_coding,
                             "sgi = %d, ", ht_sgi,
                             "num_ext = %d, ", ht_num_ext,
-                            "crc = %08b, ", crc,
+                            "crc = %08b, ", ht_crc,
                             "tail = %06b", ht_sig_tail);
                     `endif
 
@@ -895,7 +874,7 @@ always @(posedge clock) begin
             end
 
             S_CHECK_HT_SIG_CRC: begin
-                ofdm_in_stb <= 0;
+                ofdm_in_stb <= 0; // make it low in time
                 ofdm_reset <= 1;
                 crc_reset <= 0;
                 crc_count <= crc_count + 1;
@@ -911,7 +890,7 @@ always @(posedge clock) begin
                 end else if (crc_count == 35) begin
                     ht_sig_stb <= 1;
                     pkt_ht <= 1;
-                    if (crc_out ^ crc) begin
+                    if (crc_out ^ ht_crc) begin
                         pkt_header_valid_strobe <= 1;
                         status_code <= E_WRONG_CRC;
                         state <= S_HT_SIG_ERROR;

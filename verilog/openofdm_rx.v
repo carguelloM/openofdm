@@ -267,8 +267,6 @@ dot11 # (
   .sync_long_metric(),
   .sync_long_metric_stb(),
   .long_preamble_detected(long_preamble_detected),
-  .sync_long_out(),
-  .sync_long_out_strobe(),
   .phase_offset_override_en(slv_reg19[31]),
   .phase_offset_override_val(slv_reg19[15:0]),
   .phase_offset_taken(phase_offset_taken_internal),
@@ -278,7 +276,6 @@ dot11 # (
   // equalizer
   .equalizer_out(equalizer),
   .equalizer_out_strobe(equalizer_valid),
-  .equalizer_state(),
   .ofdm_symbol_eq_out_pulse(ofdm_symbol_eq_out_pulse),
 
   // legacy signal info
