@@ -33,7 +33,6 @@ module openofdm_rx #
   `DEBUG_PREFIX input wire [15:0] Fc_in_MHz,
 
   output wire demod_is_ongoing, // this needs to be corrected further to indicate actual RF on going regardless the latency
-  // output wire pkt_ht,
   output wire short_preamble_detected,
   output wire long_preamble_detected,
   output wire pkt_header_valid,
@@ -87,7 +86,9 @@ module openofdm_rx #
   output wire s00_axi_rvalid,
   input  wire s00_axi_rready
 );
+
 `include "common_params.v"
+
 // reg0~19 for config write; from reg20 for reading status
 wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg0; 
 wire [(C_S00_AXI_DATA_WIDTH-1):0] slv_reg1; // 
@@ -229,8 +230,6 @@ dot11 # (
 
   // OUTPUT: bytes and FCS status
   .demod_is_ongoing(demod_is_ongoing),
-  // .pkt_begin(),
-  // .pkt_ht(),
   .pkt_header_valid(pkt_header_valid),
   .pkt_header_valid_strobe(pkt_header_valid_strobe),
   .ht_unsupport(ht_unsupport),
