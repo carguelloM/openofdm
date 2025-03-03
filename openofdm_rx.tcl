@@ -266,9 +266,9 @@ update_ip_catalog -rebuild
 # Set 'sources_1' fileset object
 set obj [get_filesets sources_1]
 set files [list \
- "[file normalize "$origin_dir/verilog/dot11_setting_agent.v"]"\
  "[file normalize "$origin_dir/verilog/calc_mean.v"]"\
  "[file normalize "$origin_dir/verilog/equalizer.v"]"\
+ "[file normalize "$origin_dir/verilog/dot11_setting_agent.v"]"\
  "[file normalize "$origin_dir/verilog/bits_to_bytes.v"]"\
  "[file normalize "$origin_dir/verilog/complex_mult.v"]"\
  "[file normalize "$origin_dir/verilog/complex_to_mag.v"]"\
@@ -332,6 +332,11 @@ set_property -name "used_in" -value "synthesis simulation" -objects $file_obj
 set_property -name "used_in_implementation" -value "0" -objects $file_obj
 
 set file "openofdm_rx.v"
+set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
+set_property -name "used_in" -value "synthesis simulation" -objects $file_obj
+set_property -name "used_in_implementation" -value "0" -objects $file_obj
+
+set file "dot11_setting_agent.v"
 set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "used_in" -value "synthesis simulation" -objects $file_obj
 set_property -name "used_in_implementation" -value "0" -objects $file_obj
