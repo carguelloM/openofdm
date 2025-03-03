@@ -53,6 +53,9 @@ wire signed [15:0] phase_offset_for_reg_read;
 
 wire [31:0] equalizer;
 wire equalizer_valid;
+
+wire fcs_out_strobe;
+wire fcs_ok;
   
 integer run_out_of_iq_sample;
 integer iq_count, iq_count_tmp, end_dl_count;
@@ -754,7 +757,10 @@ dot11 dot11_inst (
   .phase_offset_override_val(0),
 
   .equalizer_out(equalizer),
-  .equalizer_out_strobe(equalizer_valid)
+  .equalizer_out_strobe(equalizer_valid),
+
+  .fcs_out_strobe(fcs_out_strobe),
+  .fcs_ok(fcs_ok)
 );
 
 /*
