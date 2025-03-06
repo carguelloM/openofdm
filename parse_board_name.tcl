@@ -74,5 +74,7 @@ if {$BOARD_NAME=="zed_fmcs2"} {
    set ultra_scale_flag []
    set part_string []
    set fpga_size_flag []
+   set board_part_string []
+   set board_id_string []
    puts "$BOARD_NAME is not valid!"
 }
