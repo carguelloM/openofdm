@@ -33,7 +33,7 @@ set ARGUMENT6 [lindex $argv 5]
 set ARGUMENT7 [lindex $argv 6]
 
 if {$ARGUMENT1 eq ""} {
-  set BOARD_NAME zcu102_fmcs2
+  set BOARD_NAME zed_fmcs2
 } else {
   set BOARD_NAME $ARGUMENT1
 }
