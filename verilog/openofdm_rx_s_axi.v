@@ -11,9 +11,9 @@ module openofdm_rx_s_axi #
   // Do not modify the parameters beyond this line
 
   // Width of S_AXI data bus
-  parameter integer C_S_AXI_DATA_WIDTH	= 32,
+  parameter integer C_S_AXI_DATA_WIDTH  = 32,
   // Width of S_AXI address bus
-  parameter integer C_S_AXI_ADDR_WIDTH	= 7
+  parameter integer C_S_AXI_ADDR_WIDTH  = 7
 )
 (
   output reg  slv_reg_wren_signal,
@@ -117,16 +117,16 @@ module openofdm_rx_s_axi #
 );
 
   // AXI4LITE signals
-  reg [C_S_AXI_ADDR_WIDTH-1 : 0] 	axi_awaddr;
-  reg  	axi_awready;
-  reg  	axi_wready;
-  reg [1 : 0] 	axi_bresp;
-  reg  	axi_bvalid;
-  reg [C_S_AXI_ADDR_WIDTH-1 : 0] 	axi_araddr;
-  reg  	axi_arready;
-  reg [C_S_AXI_DATA_WIDTH-1 : 0] 	axi_rdata;
-  reg [1 : 0] 	axi_rresp;
-  reg  	axi_rvalid;
+  reg [C_S_AXI_ADDR_WIDTH-1 : 0]   axi_awaddr;
+  reg    axi_awready;
+  reg    axi_wready;
+  reg [1 : 0]   axi_bresp;
+  reg    axi_bvalid;
+  reg [C_S_AXI_ADDR_WIDTH-1 : 0]   axi_araddr;
+  reg    axi_arready;
+  reg [C_S_AXI_DATA_WIDTH-1 : 0]   axi_rdata;
+  reg [1 : 0]   axi_rresp;
+  reg    axi_rvalid;
 
   // Example-specific design signals
   // local parameter for addressing 32 bit / 64 bit C_S_AXI_DATA_WIDTH
@@ -139,53 +139,53 @@ module openofdm_rx_s_axi #
   //-- Signals for user logic register space example
   //------------------------------------------------
   //-- Number of Slave Registers 32
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg0;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg1;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg2;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg3;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg4;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg5;/*
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg6;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg7;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg8;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg9;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg10;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg11;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg12;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg13;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg14;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg15;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg16;*/
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg17;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg18;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg19;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg20;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg21;/*
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg22;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg23;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg24;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg25;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg26;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg27;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg28;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg29;*/
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg30;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	slv_reg31;
-  wire	 slv_reg_rden;
-  wire	 slv_reg_wren;
-  reg [C_S_AXI_DATA_WIDTH-1:0]	 reg_data_out;
-  integer	 byte_index;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg0;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg1;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg2;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg3;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg4;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg5;/*
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg6;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg7;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg8;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg9;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg10;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg11;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg12;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg13;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg14;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg15;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg16;*/
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg17;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg18;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg19;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg20;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg21;/*
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg22;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg23;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg24;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg25;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg26;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg27;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg28;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg29;*/
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg30;
+  reg [C_S_AXI_DATA_WIDTH-1:0]  slv_reg31;
+  wire   slv_reg_rden;
+  wire   slv_reg_wren;
+  reg [C_S_AXI_DATA_WIDTH-1:0]   reg_data_out;
+  integer   byte_index;
 
   // I/O Connections assignments
 
-  assign S_AXI_AWREADY	= axi_awready;
-  assign S_AXI_WREADY	= axi_wready;
-  assign S_AXI_BRESP	= axi_bresp;
-  assign S_AXI_BVALID	= axi_bvalid;
-  assign S_AXI_ARREADY	= axi_arready;
-  assign S_AXI_RDATA	= axi_rdata;
-  assign S_AXI_RRESP	= axi_rresp;
-  assign S_AXI_RVALID	= axi_rvalid;
+  assign S_AXI_AWREADY  = axi_awready;
+  assign S_AXI_WREADY  = axi_wready;
+  assign S_AXI_BRESP  = axi_bresp;
+  assign S_AXI_BVALID  = axi_bvalid;
+  assign S_AXI_ARREADY  = axi_arready;
+  assign S_AXI_RDATA  = axi_rdata;
+  assign S_AXI_RRESP  = axi_rresp;
+  assign S_AXI_RVALID  = axi_rvalid;
 
   assign SLV_REG0 = slv_reg0;
   assign SLV_REG1 = slv_reg1;
