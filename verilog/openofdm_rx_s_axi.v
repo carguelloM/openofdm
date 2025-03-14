@@ -778,7 +778,7 @@ module openofdm_rx_s_axi #
         slv_reg31 <= SLV_REG31;
       end 
   end
-  
-// User logic ends
+    
+  // User logic ends
 
 endmodule
