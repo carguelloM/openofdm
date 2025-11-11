@@ -8,6 +8,7 @@ import sys
 NUM_LINES = 8
 HOME = os.path.expanduser('~')
 NUM_SUBCARRIER = 64
+NUM_TIME_SAMPLES = 160
 
 ################ LINE NUMBERS ############################
 LINE_POS_SYNC = [554, 577, 597, 617]
@@ -23,12 +24,14 @@ L_vector = np.array([ 0,  0,  0,  0,  0,  0,  1,  1,  -1, -1, 1,  1,  -1,
 ### LTF FREQ MASK -- FOR TESTING
 LTF_REF_RAW = "0000101001100000010100110000000000000000010101100111110101001100"
 
+def gen_ltf_time(ltf, num_subcarrs):
+    return np.fft.ifft(np.fft.fftshift(ltf), num_subcarrs)
 
-def gen_as_openofdm(ltf, num_subcarrs):
+def gen_as_openofdm(ltf):
 
     ## multiplied by 1000 for quantization i suppose
     ## reduce to 16 bits
-    ltf_time = np.fft.ifft(np.fft.fftshift(ltf), num_subcarrs) * 1000
+    ltf_time = ltf * 1000
     ltf_time_conj = np.conjugate(ltf_time);
     real_int16 = np.int16(np.round(ltf_time_conj.real))
     img_int16 = np.int16(np.round(ltf_time_conj.imag))
@@ -55,6 +58,8 @@ def apply_code_change(file_lines, new_code_lines, start_line):
 
 
 ######## Generate Verilog MODS for verilog/sync_long.v ####
+
+### note this expects LTF in time! 
 def mods_syn_long(ltf):
     file_name = os.path.join("..",  "verilog", "sync_long.v")
     ltf_iter = 0
@@ -93,6 +98,7 @@ def mods_syn_long(ltf):
     print("Done Writing to " + file_name)
 
 
+### note this expects LTF in frequency
 def mods_eql(ltf):
     file_name = os.path.join("..", "verilog", "equalizer.v")
     base_str = "\t64\'b"
@@ -135,6 +141,28 @@ def mods_eql(ltf):
     return 
 
 
+def mods_tx(ltf_time):
+    ltf_time_quant =  np.clip(np.round(ltf_time * (2**15)), -32768, 32767)
+    ltf_cp = ltf_time_quant[-32:]
+
+    ltf_w_cp = np.concatenate((ltf_cp, ltf_time_quant, ltf_time_quant)) 
+    I = np.int16(np.real(ltf_w_cp))
+    Q = np.int16(np.imag(ltf_w_cp))
+
+    print(np.imag(ltf_w_cp))
+
+    # Cast to unsigned for correct bit shifting
+    Iu = I.astype(np.uint16)
+    Qu = Q.astype(np.uint16)
+    
+    # Combine into 32-bit words: I in upper 16 bits, Q in lower 16 bits
+    words = (Iu.astype(np.uint32) << 16) | Qu
+
+    new_lines = [None] * NUM_TIME_SAMPLES
+
+    for i in range(NUM_TIME_SAMPLES):
+        new_lines[i] = '\t\t\t' + str(i)  + ':\t' + "dout = " + f"32'h{words[i]:08X}" + ";\n"
+        print(new_lines[i], end="")
 
 
 ######################## MAIN FUNCTION ######################
@@ -148,12 +176,20 @@ def main():
     print("#### RAND LTF ######")
     print(rand_ltf)
 
+    ## commet for normal functionality/ uncomment for debugin with standard preamble
+    rand_ltf = L_vector 
     ########## GET LTF IN TIME ##################
-    rand_ltf_time = gen_as_openofdm(rand_ltf, NUM_SUBCARRIER)
+    rand_ltf_time =  gen_ltf_time(rand_ltf, NUM_SUBCARRIER)
+    rand_ltf_time_RX = gen_as_openofdm(rand_ltf_time)
 
-    mods_syn_long(rand_ltf_time)
-    mods_eql(rand_ltf)
-    
+
+    ## RX mods
+    #mods_syn_long(rand_ltf_time_RX)
+    #mods_eql(rand_ltf)
+    mods_tx(rand_ltf_time)
+
+    ## TX mods
+
     print("####### ADD THIS TO CPP TX FOR TEST ############")
     cpp_code = "std::vector<gr_complex> LONG_SYMB_T = {\n"
     for val in rand_ltf:
