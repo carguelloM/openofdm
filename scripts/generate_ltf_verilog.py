@@ -5,7 +5,8 @@ import sys
 ### This script assumes that OpenOFDM is in home
 
 ################## CONSTANTS #########################
-NUM_LINES = 8
+NUM_LINES = 8 ## this is num lines to change in sync_long.v // should change to clearer name later
+NUM_LINES_L_LTF_ROM = 160
 HOME = os.path.expanduser('~')
 NUM_SUBCARRIER = 64
 NUM_TIME_SAMPLES = 160
@@ -13,6 +14,7 @@ NUM_TIME_SAMPLES = 160
 ################ LINE NUMBERS ############################
 LINE_POS_SYNC = [554, 577, 597, 617]
 LINE_POS_EQL = 60
+LINE_POS_LTF_TX = 17
 
 ## value of subcarriers for L-LTF (legacy long training field) -- FOR TESTING
 L_vector = np.array([ 0,  0,  0,  0,  0,  0,  1,  1,  -1, -1, 1,  1,  -1,
@@ -39,9 +41,9 @@ def gen_as_openofdm(ltf):
     return list(zip(real_int16, img_int16))
 
 
-def apply_code_change(file_lines, new_code_lines, start_line):
+def apply_code_change(file_lines, new_code_lines, start_line, n_lines):
     start_idx = start_line - 1
-    end_idx = start_idx + NUM_LINES
+    end_idx = start_idx + n_lines
 
     print("###### OLD LINES ####")
     lines_to_replace = file_lines[start_idx:end_idx]
@@ -91,7 +93,7 @@ def mods_syn_long(ltf):
             new_lines[i] = new_lines[i]  + "16\'d" + str(np.abs(ltf[ltf_iter][1])) + "};\n"
             
             ltf_iter+=1
-        f_lines = apply_code_change(f_lines, new_lines, old_line)
+        f_lines = apply_code_change(f_lines, new_lines, old_line, NUM_LINES)
     
     with open(file_name, "w") as f:
         f.writelines(f_lines)
@@ -142,6 +144,14 @@ def mods_eql(ltf):
 
 
 def mods_tx(ltf_time):
+    file_name = os.path.join("..", "..", "openofdm_tx", "src", "l_ltf_rom.v")
+    ltf_iter = 0
+
+    with open(file_name, "r") as f:
+        f_lines = f.readlines()
+
+    new_lines = [None] * NUM_TIME_SAMPLES
+
     ltf_time_quant =  np.clip(np.round(ltf_time * (2**15)), -32768, 32767)
     ltf_cp = ltf_time_quant[-32:]
 
@@ -158,11 +168,14 @@ def mods_tx(ltf_time):
     # Combine into 32-bit words: I in upper 16 bits, Q in lower 16 bits
     words = (Iu.astype(np.uint32) << 16) | Qu
 
-    new_lines = [None] * NUM_TIME_SAMPLES
 
     for i in range(NUM_TIME_SAMPLES):
         new_lines[i] = '\t\t\t' + str(i)  + ':\t' + "dout = " + f"32'h{words[i]:08X}" + ";\n"
-        print(new_lines[i], end="")
+    
+    f_lines = apply_code_change(f_lines, new_lines, LINE_POS_LTF_TX, NUM_LINES_L_LTF_ROM)
+
+    for ln in f_lines:
+        print(ln)
 
 
 ######################## MAIN FUNCTION ######################
@@ -184,8 +197,8 @@ def main():
 
 
     ## RX mods
-    #mods_syn_long(rand_ltf_time_RX)
-    #mods_eql(rand_ltf)
+    # mods_syn_long(rand_ltf_time_RX)
+    # mods_eql(rand_ltf)
     mods_tx(rand_ltf_time)
 
     ## TX mods
