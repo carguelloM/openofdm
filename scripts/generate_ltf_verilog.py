@@ -175,7 +175,7 @@ def mods_tx(ltf_time):
     f_lines = apply_code_change(f_lines, new_lines, LINE_POS_LTF_TX, NUM_LINES_L_LTF_ROM)
 
     with open(file_name, "w") as f:
-        f,writelines(f_lines)
+        f.writelines(f_lines)
     print("Done Writing to " + file_name)
     return
 
