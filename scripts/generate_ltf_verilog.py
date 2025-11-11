@@ -170,12 +170,9 @@ def mods_tx(ltf_time):
 
 
     for i in range(NUM_TIME_SAMPLES):
-        new_lines[i] = '\t\t\t' + str(i)  + ':\t' + "dout = " + f"32'h{words[i]:08X}" + ";\n"
+        new_lines[i] = '\t\t' + str(i)  + ':\t' + "dout = " + f"32'h{words[i]:08X}" + ";\n"
     
     f_lines = apply_code_change(f_lines, new_lines, LINE_POS_LTF_TX, NUM_LINES_L_LTF_ROM)
-
-    for ln in f_lines:
-        print(ln)
 
 
 ######################## MAIN FUNCTION ######################
